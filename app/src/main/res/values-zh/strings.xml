@@ -322,7 +322,7 @@
     <string name="downloads_finished">下载 · 已完成</string>
     <string name="downloading_progress">正在下载 · %1$d%%</string>
     <string name="starting">正在开始</string>
-    <string name="saved_to_bitchord_folder">已保存到 Music/BitChord</string>
+    <string name="saved_to_bitchord_folder">已保存到 Music/Lyrelo</string>
     <string name="nothing_downloading">当前没有下载任务</string>
     <string name="nothing_to_explore">目前没有可探索的内容</string>
     <string name="no_youtube_music_results">YouTube Music 没有搜索结果</string>
@@ -730,7 +730,7 @@
     <string name="listen_together_custom_server_dialog_message">此派对托管在外部服务器上：\n\n%1$s\n\n要切换派对服务器并加入派对 %2$s 吗？</string>
     <string name="listen_together_custom_server_switch_and_join">切换并加入</string>
     <string name="listen_together_official_server_dialog_title">切换到官方服务器？</string>
-    <string name="listen_together_official_server_dialog_message">此派对托管在 BitChord 官方服务器上。\n\n要切换回官方服务器并加入派对 %1$s 吗？</string>
+    <string name="listen_together_official_server_dialog_message">此派对托管在 Lyrelo 官方服务器上。\n\n要切换回官方服务器并加入派对 %1$s 吗？</string>
     <string name="listen_together_switch_failed_stayed_in_party">无法加入派对：%1$s。仍留在派对 %2$s 中。</string>
     <string name="listen_together_switch_failed">无法加入派对：%1$s。</string>
     <string name="listen_together_ping">%1$d ms</string>

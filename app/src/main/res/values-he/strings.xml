@@ -328,7 +328,7 @@
     <string name="downloads_finished">הורדות · הסתיימו</string>
     <string name="downloading_progress">מוריד · %1$d%%</string>
     <string name="starting">מתחיל</string>
-    <string name="saved_to_bitchord_folder">נשמר ב-Music/BitChord</string>
+    <string name="saved_to_bitchord_folder">נשמר ב-Music/Lyrelo</string>
     <string name="nothing_downloading">שום דבר לא יורד</string>
     <string name="nothing_to_explore">אין מה לחקור כרגע</string>
     <string name="no_youtube_music_results">אין תוצאות מ-YouTube Music</string>
@@ -755,7 +755,7 @@
     <string name="listen_together_custom_server_dialog_message">המסיבה הזו מתארחת בשרת חיצוני:\n\n%1$s\n\nלהחליף את שרת המסיבות ולהצטרף למסיבה %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">החלפה והצטרפות</string>
     <string name="listen_together_official_server_dialog_title">לעבור לשרת הרשמי?</string>
-    <string name="listen_together_official_server_dialog_message">המסיבה הזו מתארחת בשרת הרשמי של BitChord.\n\nלחזור לשרת הרשמי ולהצטרף למסיבה %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">המסיבה הזו מתארחת בשרת הרשמי של Lyrelo.\n\nלחזור לשרת הרשמי ולהצטרף למסיבה %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">לא ניתן להצטרף למסיבה: %1$s. נשארתם במסיבה %2$s.</string>
     <string name="listen_together_switch_failed">לא ניתן להצטרף למסיבה: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>

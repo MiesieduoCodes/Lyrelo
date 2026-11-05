@@ -348,7 +348,7 @@
     <string name="starting">กำลังเริ่ม</string>
     <string name="start_radio">เริ่มวิทยุ</string>
     <string name="radio_started">เริ่มวิทยุ %1$s แล้ว</string>
-    <string name="saved_to_bitchord_folder">บันทึกลง Music/BitChord แล้ว</string>
+    <string name="saved_to_bitchord_folder">บันทึกลง Music/Lyrelo แล้ว</string>
     <string name="nothing_downloading">ไม่มีการดาวน์โหลด</string>
     <string name="nothing_to_explore">ยังไม่มีอะไรให้สำรวจตอนนี้</string>
     <string name="no_youtube_music_results">ไม่มีผลลัพธ์จาก YouTube Music</string>
@@ -776,7 +776,7 @@
     <string name="listen_together_custom_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ภายนอก:\n\n%1$s\n\nต้องการเปลี่ยนเซิร์ฟเวอร์ปาร์ตี้และเข้าร่วมปาร์ตี้ %2$s หรือไม่</string>
     <string name="listen_together_custom_server_switch_and_join">เปลี่ยนและเข้าร่วม</string>
     <string name="listen_together_official_server_dialog_title">เปลี่ยนเป็นเซิร์ฟเวอร์ทางการไหม</string>
-    <string name="listen_together_official_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ทางการของ BitChord\n\nต้องการกลับไปใช้เซิร์ฟเวอร์ทางการและเข้าร่วมปาร์ตี้ %1$s หรือไม่</string>
+    <string name="listen_together_official_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ทางการของ Lyrelo\n\nต้องการกลับไปใช้เซิร์ฟเวอร์ทางการและเข้าร่วมปาร์ตี้ %1$s หรือไม่</string>
     <string name="listen_together_switch_failed_stayed_in_party">เข้าร่วมปาร์ตี้ไม่ได้: %1$s ยังอยู่ในปาร์ตี้ %2$s</string>
     <string name="listen_together_switch_failed">เข้าร่วมปาร์ตี้ไม่ได้: %1$s</string>
     <string name="listen_together_ping">%1$d ms</string>

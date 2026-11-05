@@ -322,7 +322,7 @@
     <string name="downloads_finished">Unduhan · selesai</string>
     <string name="downloading_progress">Mengunduh · %1$d%%</string>
     <string name="starting">Memulai</string>
-    <string name="saved_to_bitchord_folder">Disimpan ke Music/BitChord</string>
+    <string name="saved_to_bitchord_folder">Disimpan ke Music/Lyrelo</string>
     <string name="nothing_downloading">Tidak ada yang sedang diunduh</string>
     <string name="nothing_to_explore">Belum ada yang bisa dijelajahi saat ini</string>
     <string name="no_youtube_music_results">Tidak ada hasil dari YouTube Music</string>
@@ -730,7 +730,7 @@
     <string name="listen_together_custom_server_dialog_message">Pesta ini di-host di server eksternal:\n\n%1$s\n\nMau mengganti server pesta dan ikut pesta %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Ganti &amp; Ikut</string>
     <string name="listen_together_official_server_dialog_title">Beralih ke server resmi?</string>
-    <string name="listen_together_official_server_dialog_message">Pesta ini di-host di server resmi BitChord.\n\nMau kembali ke server resmi dan ikut pesta %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">Pesta ini di-host di server resmi Lyrelo.\n\nMau kembali ke server resmi dan ikut pesta %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Gagal ikut pesta: %1$s. Tetap di pesta %2$s.</string>
     <string name="listen_together_switch_failed">Gagal ikut pesta: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>
