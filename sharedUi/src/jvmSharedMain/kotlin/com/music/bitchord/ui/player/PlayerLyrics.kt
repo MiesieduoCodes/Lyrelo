@@ -3045,7 +3045,7 @@ private fun LyricsLoadingLine(text: String, modifier: Modifier = Modifier) {
  * the two toggles that ask for one — see [rememberLyricsTranslation].
  */
 internal class LyricsTranslationUi(
-    /** The lines the one-line strip reads: the originals, or their translation. */
+    /** The lines the one-line strip reads: the originals, or their romanization. */
     val displayedLyrics: List<LyricLine>,
     /** Drawn small under each original line in the panel; null for none. */
     val subLines: List<LyricLine>?,
@@ -3127,15 +3127,15 @@ internal fun rememberLyricsTranslation(
         }
     }
     val displayedLyrics = when (lyricsDisplayMode) {
-        LyricsDisplayMode.Translated ->
-            (translationState as? LyricsTranslationUiState.Ready)?.lines ?: lyrics.orEmpty()
+        // The strip stays on the original words: that is the language being
+        // learned. Translations belong under each line in the full view.
+        LyricsDisplayMode.Translated -> lyrics.orEmpty()
         LyricsDisplayMode.Romanized ->
             (romanizationState as? LyricsTranslationUiState.Ready)?.lines ?: lyrics.orEmpty()
         LyricsDisplayMode.Original -> lyrics.orEmpty()
     }
     // What the panel draws in small type under each original line, Apple
-    // Music style. The panel itself always keeps the original words; only the
-    // one-line strip over the scrubber swaps to [displayedLyrics]. One mode at
+    // Music style. The panel itself always keeps the original words. One mode at
     // a time by construction — [lyricsDisplayMode] holds a single value.
     val lyricsSubLines = when (lyricsDisplayMode) {
         LyricsDisplayMode.Translated -> (translationState as? LyricsTranslationUiState.Ready)?.lines
