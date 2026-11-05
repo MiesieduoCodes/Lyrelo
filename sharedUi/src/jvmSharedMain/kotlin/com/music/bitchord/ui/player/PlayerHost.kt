@@ -12,7 +12,13 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.ArtworkCorner
 import com.music.bitchord.data.settings.PlayerBackground
+import com.music.bitchord.data.settings.LyricAlign
+import com.music.bitchord.data.settings.LyricFont
+import com.music.bitchord.data.settings.LyricFontSize
+import com.music.bitchord.data.settings.LyricStyle
 import com.music.bitchord.data.settings.PlayerStyle
+import com.music.bitchord.data.settings.TranslationColor
+import com.music.bitchord.data.settings.TranslationSize
 import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.settings.SmartAnalysis
 import com.music.bitchord.data.settings.MixBlend
@@ -245,6 +251,12 @@ interface PlayerSettingsSource {
     val hideStatusBar: StateFlow<Boolean>
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val legacyMeshGradient: StateFlow<Boolean>
+    val lyricStyle: StateFlow<LyricStyle>
+    val lyricFontSize: StateFlow<LyricFontSize>
+    val lyricFont: StateFlow<LyricFont>
+    val lyricAlign: StateFlow<LyricAlign>
+    val translationSize: StateFlow<TranslationSize>
+    val translationColor: StateFlow<TranslationColor>
     val playerStyle: StateFlow<PlayerStyle>
     val playerBackground: StateFlow<PlayerBackground>
     val artworkCorner: StateFlow<ArtworkCorner>

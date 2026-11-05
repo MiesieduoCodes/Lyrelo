@@ -42,3 +42,23 @@ enum class PlayerBackground { ARTWORK_COLORS, BLUR, SOLID_DARK, ANIMATED_GRADIEN
 
 /** How far the artwork's corners are rounded, in dp. Vinyl is always round. */
 enum class ArtworkCorner(val dp: Int) { NONE(0), SMALL(8), MEDIUM(20), LARGE(36) }
+
+/** How the lyric panel marks what is being sung. */
+enum class LyricStyle { LINE, GLOW, KARAOKE, WORD_BY_WORD }
+
+enum class LyricFontSize(val scale: Float) { SMALL(0.8f), MEDIUM(1f), LARGE(1.2f), HUGE(1.4f) }
+
+enum class LyricFont { DEFAULT, SANS, SERIF, MONO }
+
+enum class LyricAlign { LEFT, CENTER }
+
+enum class TranslationSize(val scale: Float) { SMALL(0.8f), MEDIUM(1f), LARGE(1.25f) }
+
+/** The translation line's color, or null for the player's own tint. */
+enum class TranslationColor(val argb: Long?) {
+    DEFAULT(null),
+    WHITE(0xFFFFFFFF),
+    AMBER(0xFFFFC857),
+    MINT(0xFF7CE7C3),
+    PINK(0xFFFF9BCB),
+}

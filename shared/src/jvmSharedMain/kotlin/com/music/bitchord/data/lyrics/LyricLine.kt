@@ -151,6 +151,11 @@ data class LyricLine(
     val alignment: LyricAlignment = LyricAlignment.Start,
     /** Display-only translation: drive its sweep and bloom from the original vocal. */
     val timingSource: LyricLine? = null,
+    /**
+     * [words] were estimated from the line's length, for a style that needs word
+     * timing the source didn't have. Drawing only: see `styledLyricLines`.
+     */
+    val wordTimingEstimated: Boolean = false,
 ) {
     val isGap: Boolean get() = text.isEmpty()
 

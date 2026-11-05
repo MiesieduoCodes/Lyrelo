@@ -97,6 +97,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -135,6 +136,8 @@ import com.music.bitchord.data.lyrics.LyricAlignment
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.lyrics.translationLanguageName
+import com.music.bitchord.data.settings.LyricStyle
+import com.music.bitchord.data.settings.LyricAlign
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.Haptics
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -196,8 +199,9 @@ private fun voiceStyle(
     text: String,
     alignEnd: Boolean,
     laneLocked: Boolean,
+    centered: Boolean = false,
 ): TextStyle = base.copy(
-    textAlign = if (alignsRight(text, alignEnd, laneLocked)) TextAlign.Right else TextAlign.Left,
+    textAlign = if (centered && !laneLocked) TextAlign.Center else if (alignsRight(text, alignEnd, laneLocked)) TextAlign.Right else TextAlign.Left,
     textDirection = if (isRtl(text)) androidx.compose.ui.text.style.TextDirection.Rtl else androidx.compose.ui.text.style.TextDirection.Ltr,
 )
 
@@ -291,6 +295,7 @@ private const val BACKING_FADE_LEAD = 1.6f
  * way Apple Music prints pronunciation under the lyric, and tucked up into the
  * lead's glow inset so the two read as one line rather than two rows.
  */
+private const val ACCENT_GLOW_RADIUS = 42f
 private val SUB_LYRIC_FONT_SIZE = 20.sp
 private val SUB_LYRIC_LINE_HEIGHT = 25.sp
 private val SUB_BACKING_FONT_SIZE = 16.sp
@@ -1801,6 +1806,24 @@ internal fun LyricsPanel(
 ) {
     val panelPlaying = isPlaying && active
     val clock = rememberLyricClock(trackKey, playhead, panelPlaying)
+    val lyricStyleChoice by PlayerSettings.lyricStyle.collectAsStateWithLifecycle()
+    val lyricFontSize by PlayerSettings.lyricFontSize.collectAsStateWithLifecycle()
+    val lyricFont by PlayerSettings.lyricFont.collectAsStateWithLifecycle()
+    val lyricAlign by PlayerSettings.lyricAlign.collectAsStateWithLifecycle()
+    val translationSize by PlayerSettings.translationSize.collectAsStateWithLifecycle()
+    val translationColor by PlayerSettings.translationColor.collectAsStateWithLifecycle()
+    val translationTint = translationColor.argb?.let { Color(it) }
+    val centerLines = lyricAlign == LyricAlign.CENTER
+    // Named as the parameter is on purpose: everything below draws the styled sheet.
+    val lines = remember(lines, lyricStyleChoice) { styledLyricLines(lines, lyricStyleChoice) }
+    val subLines = remember(subLines, lyricStyleChoice) {
+        // A whole-line style applies to the translation under the line as well.
+        if (lyricStyleChoice == LyricStyle.LINE || lyricStyleChoice == LyricStyle.GLOW) {
+            subLines?.let { styledLyricLines(it, lyricStyleChoice) }
+        } else {
+            subLines
+        }
+    }
     val subReveal = rememberSubLyricsReveal(subLines, trackKey)
 
     val isSynced = remember(lines) { lines.any { it.timeMs > 0L } }
@@ -2227,17 +2250,19 @@ internal fun LyricsPanel(
                 val alignEnd = duet && line.alignment == LyricAlignment.End
                 val style = if (isSynced) {
                     MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 34.sp,
-                        lineHeight = 41.sp,
+                        fontSize = 34.sp * lyricFontSize.scale,
+                        lineHeight = 41.sp * lyricFontSize.scale,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = if (alignEnd) TextAlign.End else TextAlign.Start,
+                        fontFamily = lyricFont.family(),
                     )
                 } else {
                     MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = 30.sp,
-                        lineHeight = 38.sp,
+                        fontSize = 30.sp * lyricFontSize.scale,
+                        lineHeight = 38.sp * lyricFontSize.scale,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = if (alignEnd) TextAlign.End else TextAlign.Start,
+                        fontFamily = lyricFont.family(),
                     )
                 }
                 // The stack sits fractionally back and the playing line comes
@@ -2377,8 +2402,8 @@ internal fun LyricsPanel(
                 // seeks to the same place.
                 val sub = subReveal.lines?.getOrNull(index)
                 val subStyle = style.copy(
-                    fontSize = SUB_LYRIC_FONT_SIZE,
-                    lineHeight = SUB_LYRIC_LINE_HEIGHT,
+                    fontSize = SUB_LYRIC_FONT_SIZE * translationSize.scale,
+                    lineHeight = SUB_LYRIC_LINE_HEIGHT * translationSize.scale,
                     fontWeight = FontWeight.Bold,
                 )
                 // The answering voice is only on screen while it is being sung,
@@ -2429,11 +2454,12 @@ internal fun LyricsPanel(
                     PanelVoice(
                         line = line,
                         clock = clock,
-                        style = voiceStyle(style, line.text, alignEnd, duet),
+                        style = voiceStyle(style, line.text, alignEnd, duet, centerLines),
                         isActive = isActive,
                         sung = sung,
                         synced = isSynced,
                         browsing = browsing,
+                        accentGlow = lyricStyleChoice == LyricStyle.GLOW,
                         glowAlpha = glow,
                         room = GLOW_ROOM,
                         alignEnd = alignEnd,
@@ -2446,10 +2472,11 @@ internal fun LyricsPanel(
                         PanelVoice(
                             line = subLine,
                             clock = clock,
-                            style = voiceStyle(subStyle, subLine.text, alignEnd, duet),
+                            style = voiceStyle(subStyle, subLine.text, alignEnd, duet, centerLines),
                             isActive = isActive,
                             sung = sung,
                             synced = isSynced,
+                            colorOverride = translationTint,
                             browsing = browsing,
                             glowAlpha = 0f,
                             room = 0.dp,
@@ -2484,7 +2511,7 @@ internal fun LyricsPanel(
                                 style = voiceStyle(style.copy(
                                     fontSize = BACKING_FONT_SIZE,
                                     lineHeight = BACKING_LINE_HEIGHT,
-                                ), backing.text, alignEnd, duet),
+                                ), backing.text, alignEnd, duet, centerLines),
                                 isActive = isActive,
                                 sung = sung,
                                 synced = isSynced,
@@ -2515,7 +2542,7 @@ internal fun LyricsPanel(
                                         style = voiceStyle(subStyle.copy(
                                             fontSize = SUB_BACKING_FONT_SIZE,
                                             lineHeight = SUB_BACKING_LINE_HEIGHT,
-                                        ), subBacking.text, alignEnd, duet),
+                                        ), subBacking.text, alignEnd, duet, centerLines),
                                         isActive = isActive,
                                         sung = sung,
                                         synced = isSynced,
@@ -2575,6 +2602,10 @@ private fun PanelVoice(
      * movement competes with the line being read and makes the row look busy.
      */
     rise: Boolean = true,
+    /** Glow style: the line being sung glows in the artwork's color. */
+    accentGlow: Boolean = false,
+    /** A color chosen in Settings, in place of the white and tint below. */
+    colorOverride: Color? = null,
     modifier: Modifier = Modifier,
 ) {
     // Vazirmatn for Persian/Arabic-script lines; Latin lines keep the player's font.
@@ -2589,8 +2620,13 @@ private fun PanelVoice(
     // line warms to white as it is reached and cools as it is left. Lyrics
     // with no timing have no line being sung, and stay white throughout.
     val color by animateColorAsState(
-        targetValue = if (isActive || !synced) Color.White else LocalPlayerTint.current,
+        targetValue = colorOverride ?: if (isActive || !synced) Color.White else LocalPlayerTint.current,
         label = "lyricLineColor",
+    )
+    val accent = LocalPlayerTint.current
+    val glowStrength by animateFloatAsState(
+        targetValue = if (accentGlow && isActive) 1f else 0f,
+        label = "lyricAccentGlow",
     )
     if (line.isWordSynced && !browsing) {
         // Every word-synced line goes through the sweep, not just the playing
@@ -2661,7 +2697,16 @@ private fun PanelVoice(
         var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
         Text(
             text = line.text,
-            style = lyricStyle,
+            style = if (glowStrength > 0f) {
+                lyricStyle.copy(
+                    shadow = Shadow(
+                        color = accent.copy(alpha = glowStrength),
+                        blurRadius = ACCENT_GLOW_RADIUS * glowStrength,
+                    ),
+                )
+            } else {
+                lyricStyle
+            },
             color = color.copy(alpha = lit),
             onTextLayout = { layout = it },
             modifier = modifier.lyricParticles(layout, translationProgress, room).padding(room),
@@ -3279,6 +3324,11 @@ internal fun rememberLyricsTranslation(
             }
         }
     }
+    // Karaoke and Word by word on a sheet with no real word timing are running on
+    // an estimate, and the status line says so.
+    val lyricStyleChoice by PlayerSettings.lyricStyle.collectAsStateWithLifecycle()
+    val estimatesTiming = (lyricStyleChoice == LyricStyle.KARAOKE || lyricStyleChoice == LyricStyle.WORD_BY_WORD) &&
+        remember(lyrics) { lyrics.orEmpty().none { it.isWordSynced } && lyrics.orEmpty().any { it.timeMs > 0L } }
     // The one line that sits above the scrubber while the lyrics are open: which
     // of the providers the timings came from, or what the translation is doing.
     // Worked out once for both layouts — the portrait player puts it over its
@@ -3297,6 +3347,9 @@ internal fun rememberLyricsTranslation(
             stringResource(Res.string.lyrics_already_in_language, translationLanguageName)
         romanizationState is LyricsTranslationUiState.SameLanguage ->
             stringResource(Res.string.lyrics_already_romanized)
+        lyricsSource != null && estimatesTiming ->
+            stringResource(Res.string.lyrics_by, lyricsSource.label) + " · " +
+                stringResource(Res.string.lyrics_estimated_timing)
         lyricsSource != null -> stringResource(Res.string.lyrics_by, lyricsSource.label)
         lyricsUnavailable -> stringResource(Res.string.no_lyrics_found)
         lyrics.isNullOrEmpty() -> loadingText

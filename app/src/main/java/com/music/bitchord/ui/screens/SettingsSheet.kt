@@ -195,6 +195,7 @@ fun SettingsScreen(
     onAccountScrobbling: () -> Unit,
     onEqualizer: () -> Unit,
     onPlayerStyle: () -> Unit,
+    onLyricStyle: () -> Unit,
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
     onTranslationLanguage: () -> Unit,
@@ -248,7 +249,6 @@ fun SettingsScreen(
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
     val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val liquidGlassSupported = isGlassSupported()
-    val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
@@ -1145,19 +1145,21 @@ fun SettingsScreen(
             // sources are third-party services being reached on the user's
             // connection — which is the part worth being able to narrow.
             if (syncedLyrics) {
-                val lyricsBlurTitle = stringResource(R.string.blur_unfocused_lyrics)
-                row(lyricsBlurTitle, "lyrics", "blur") {
+                val lyricStyleTitle = stringResource(R.string.lyric_style)
+                row(lyricStyleTitle, "lyrics", "style", "blur", "karaoke", "font", "glow") {
                     SettingsRow(
-                        icon = SfIcons.BlurOn,
-                        title = lyricsBlurTitle,
-                        subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
-                        trailing = {
-                            IosSwitch(
-                                checked = lyricsBlur,
-                                onCheckedChange = AppSettings::setLyricsBlur,
-                            )
-                        },
-                        onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
+                        icon = SfIcons.Translate,
+                        title = lyricStyleTitle,
+                        subtitle = stringResource(
+                            when (AppSettings.lyricStyle.collectAsStateWithLifecycle().value) {
+                                com.music.bitchord.data.settings.LyricStyle.LINE -> R.string.lyric_style_line
+                                com.music.bitchord.data.settings.LyricStyle.GLOW -> R.string.lyric_style_glow
+                                com.music.bitchord.data.settings.LyricStyle.KARAOKE -> R.string.lyric_style_karaoke
+                                com.music.bitchord.data.settings.LyricStyle.WORD_BY_WORD -> R.string.lyric_style_word_by_word
+                            },
+                        ),
+                        trailing = { Chevron() },
+                        onClick = onLyricStyle,
                     )
                 }
                 val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)

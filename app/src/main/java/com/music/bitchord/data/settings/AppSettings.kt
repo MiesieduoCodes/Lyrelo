@@ -573,6 +573,12 @@ object AppSettings {
      */
     val legacyMeshGradient = MutableStateFlow(false)
 
+    val lyricStyle = MutableStateFlow(LyricStyle.LINE)
+    val lyricFontSize = MutableStateFlow(LyricFontSize.MEDIUM)
+    val lyricFont = MutableStateFlow(LyricFont.DEFAULT)
+    val lyricAlign = MutableStateFlow(LyricAlign.LEFT)
+    val translationSize = MutableStateFlow(TranslationSize.MEDIUM)
+    val translationColor = MutableStateFlow(TranslationColor.DEFAULT)
     val playerStyle = MutableStateFlow(PlayerStyle.CLASSIC)
     val playerBackground = MutableStateFlow(PlayerBackground.BLUR)
     val artworkCorner = MutableStateFlow(ArtworkCorner.SMALL)
@@ -1014,6 +1020,12 @@ object AppSettings {
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         legacyMeshGradient.value = prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)
+        lyricStyle.value = enumPref(KEY_LYRIC_STYLE, LyricStyle.LINE)
+        lyricFontSize.value = enumPref(KEY_LYRIC_FONT_SIZE, LyricFontSize.MEDIUM)
+        lyricFont.value = enumPref(KEY_LYRIC_FONT, LyricFont.DEFAULT)
+        lyricAlign.value = enumPref(KEY_LYRIC_ALIGN, LyricAlign.LEFT)
+        translationSize.value = enumPref(KEY_TRANSLATION_SIZE, TranslationSize.MEDIUM)
+        translationColor.value = enumPref(KEY_TRANSLATION_COLOR, TranslationColor.DEFAULT)
         playerStyle.value = enumPref(KEY_PLAYER_STYLE, PlayerStyle.CLASSIC)
         playerBackground.value = enumPref(KEY_PLAYER_BACKGROUND, PlayerBackground.BLUR)
         artworkCorner.value = enumPref(KEY_ARTWORK_CORNER, ArtworkCorner.SMALL)
@@ -1625,6 +1637,36 @@ object AppSettings {
 
     private inline fun <reified T : Enum<T>> enumPref(key: String, default: T): T =
         runCatching { enumValueOf<T>(prefs.getString(key, null).orEmpty()) }.getOrDefault(default)
+
+    fun setLyricStyle(value: LyricStyle) {
+        lyricStyle.value = value
+        prefs.edit().putString(KEY_LYRIC_STYLE, value.name).apply()
+    }
+
+    fun setLyricFontSize(value: LyricFontSize) {
+        lyricFontSize.value = value
+        prefs.edit().putString(KEY_LYRIC_FONT_SIZE, value.name).apply()
+    }
+
+    fun setLyricFont(value: LyricFont) {
+        lyricFont.value = value
+        prefs.edit().putString(KEY_LYRIC_FONT, value.name).apply()
+    }
+
+    fun setLyricAlign(value: LyricAlign) {
+        lyricAlign.value = value
+        prefs.edit().putString(KEY_LYRIC_ALIGN, value.name).apply()
+    }
+
+    fun setTranslationSize(value: TranslationSize) {
+        translationSize.value = value
+        prefs.edit().putString(KEY_TRANSLATION_SIZE, value.name).apply()
+    }
+
+    fun setTranslationColor(value: TranslationColor) {
+        translationColor.value = value
+        prefs.edit().putString(KEY_TRANSLATION_COLOR, value.name).apply()
+    }
 
     fun setPlayerStyle(value: PlayerStyle) {
         playerStyle.value = value
@@ -2239,6 +2281,12 @@ object AppSettings {
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_LEARNING_LANGUAGE = "learning_language"
+    private const val KEY_LYRIC_STYLE = "lyric_style"
+    private const val KEY_LYRIC_FONT_SIZE = "lyric_font_size"
+    private const val KEY_LYRIC_FONT = "lyric_font"
+    private const val KEY_LYRIC_ALIGN = "lyric_align"
+    private const val KEY_TRANSLATION_SIZE = "translation_size"
+    private const val KEY_TRANSLATION_COLOR = "translation_color"
     private const val KEY_PLAYER_STYLE = "player_style"
     private const val KEY_PLAYER_BACKGROUND = "player_background"
     private const val KEY_ARTWORK_CORNER = "artwork_corner"

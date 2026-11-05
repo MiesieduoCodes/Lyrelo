@@ -23,6 +23,7 @@ sealed interface AppRoute {
     data object WearOs : AppRoute
     data object Equalizer : AppRoute
     data object PlayerStyle : AppRoute
+    data object LyricStyle : AppRoute
     data object Replay : AppRoute
     data object History : AppRoute
     data object Discord : AppRoute
