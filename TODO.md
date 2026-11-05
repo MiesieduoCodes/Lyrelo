@@ -14,3 +14,7 @@
 ## Still points at BitChord
 - [ ] Discord: "Visit BitChord" button and BitChord's Discord application ID (`DiscordRPC.kt`, `DiscordApplication.kt`).
 - [ ] README badges and banner (release, downloads and "Listening now" are BitChord's).
+
+## Language learning
+- [ ] Translate the new language picker strings. They're English-only for now; other languages fall back to English.
+- [ ] Use the learning language. It's saved and editable, but nothing reads it yet: translations depend only on the native language.

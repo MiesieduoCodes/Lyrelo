@@ -286,6 +286,7 @@ import com.music.bitchord.ui.components.optimizedHazeEffect
 import com.music.bitchord.ui.components.topBarContentPadding
 import com.music.bitchord.ui.components.topBarHeight
 import com.music.bitchord.ui.components.AppLanguageDialog
+import com.music.bitchord.ui.components.LearningLanguageDialog
 import com.music.bitchord.ui.components.TranslationLanguageDialog
 import com.music.bitchord.ui.components.LyricsSourcesDialog
 import com.music.bitchord.ui.components.ServerEditorHost
@@ -346,6 +347,7 @@ import com.music.bitchord.ui.screens.LibraryScreen
 import com.music.bitchord.ui.screens.MoodGenrePlaylistsScreen
 import com.music.bitchord.ui.screens.SearchScreen
 import com.music.bitchord.data.settings.SongSort
+import com.music.bitchord.ui.onboarding.LanguageSetupScreen
 import com.music.bitchord.ui.onboarding.OnboardingScreen
 import com.music.bitchord.ui.replay.ReplayScreen
 import com.music.bitchord.ui.replay.cards
@@ -655,6 +657,7 @@ private fun BitChordApp(
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
+    var showLearningLanguage by remember { mutableStateOf(false) }
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
@@ -790,6 +793,9 @@ private fun BitChordApp(
     val onboardingShown = remember { MutableTransitionState(!onboardingComplete) }
     onboardingShown.targetState = !onboardingComplete
     val onboardingVisible = onboardingShown.currentState || onboardingShown.targetState
+    val languageSetupComplete by AppSettings.languageSetupComplete.collectAsStateWithLifecycle()
+    val languageSetupShown = remember { MutableTransitionState(!languageSetupComplete) }
+    languageSetupShown.targetState = !languageSetupComplete
 
     // ---- Navigation ----
     // One back stack for every page: the routes pushed over the tabs, and the
@@ -3081,6 +3087,7 @@ private fun BitChordApp(
                                 },
                                 onLyricsSources = { showLyricsSources = true },
                                 onTranslationLanguage = { showTranslationLanguage = true },
+                                onLearningLanguage = { showLearningLanguage = true },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
@@ -5258,6 +5265,17 @@ private fun BitChordApp(
             )
         }
 
+        // ---- Languages (once; over the welcome, which follows it) ----
+        AnimatedVisibility(
+            visibleState = languageSetupShown,
+            enter = EnterTransition.None,
+            exit = slideOutVertically(
+                tween<IntOffset>(durationMillis = 560, easing = OnboardingDismissEasing),
+            ) { it },
+        ) {
+            LanguageSetupScreen(onFinish = AppSettings::completeLanguageSetup)
+        }
+
         // ---- Google sign-in (full screen WebView) ----
         webSession?.let { mode ->
             BackHandler { webSession = null }
@@ -5481,6 +5499,14 @@ private fun BitChordApp(
             TranslationLanguageDialog(
                 hazeState = hazeState,
                 onDismiss = { showTranslationLanguage = false },
+            )
+        }
+
+        if (showLearningLanguage) {
+            BackHandler { showLearningLanguage = false }
+            LearningLanguageDialog(
+                hazeState = hazeState,
+                onDismiss = { showLearningLanguage = false },
             )
         }
 

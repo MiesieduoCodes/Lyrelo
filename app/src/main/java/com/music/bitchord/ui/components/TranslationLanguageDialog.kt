@@ -56,8 +56,48 @@ import java.util.Locale
 /** How much of the screen the list may take before it scrolls inside the card. */
 private val LIST_MAX_HEIGHT = 340.dp
 
+/** The native language: what lyrics are translated into. */
+@Composable
+fun TranslationLanguageDialog(
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selected by AppSettings.translationLanguage.collectAsStateWithLifecycle()
+    LanguagePickerDialog(
+        title = stringResource(R.string.translation_language),
+        description = stringResource(R.string.translation_language_description),
+        selected = selected,
+        offerAppLanguage = true,
+        hazeState = hazeState,
+        onSelect = AppSettings::setTranslationLanguage,
+        onDismiss = onDismiss,
+        modifier = modifier,
+    )
+}
+
+/** The language the listener is learning. */
+@Composable
+fun LearningLanguageDialog(
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selected by AppSettings.learningLanguage.collectAsStateWithLifecycle()
+    LanguagePickerDialog(
+        title = stringResource(R.string.learning_language),
+        description = stringResource(R.string.learning_language_description),
+        selected = selected,
+        offerAppLanguage = false,
+        hazeState = hazeState,
+        onSelect = AppSettings::setLearningLanguage,
+        onDismiss = onDismiss,
+        modifier = modifier,
+    )
+}
+
 /**
- * Which language the lyrics translate button translates into.
+ * Picks one language from the translator's list.
  *
  * The same frosted alert as [AppLanguageDialog], with two differences that a
  * hundred and thirty rows force. It scrolls, because the app's alerts are laid
@@ -66,19 +106,23 @@ private val LIST_MAX_HEIGHT = 340.dp
  * Vietnamese. Selecting a row applies it and closes, same as the app-language
  * picker — one active language, nothing to confirm.
  *
- * The first row is the default and is deliberately not a language: blank means
- * "follow the app", which is a different answer from naming today's app
- * language and having it stick when the app changes.
+ * With [offerAppLanguage], the first row is the default and is deliberately not
+ * a language: blank means "follow the app", which is a different answer from
+ * naming today's app language and having it stick when the app changes.
  */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-fun TranslationLanguageDialog(
+fun LanguagePickerDialog(
+    title: String,
+    description: String,
+    selected: String,
+    offerAppLanguage: Boolean,
     hazeState: HazeState,
+    onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val selected by AppSettings.translationLanguage.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
     val appLocale = AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault()
     var query by remember { mutableStateOf("") }
@@ -141,7 +185,7 @@ fun TranslationLanguageDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = stringResource(R.string.translation_language),
+                    text = title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 17.sp,
                         fontWeight = FontWeight.W600,
@@ -150,7 +194,7 @@ fun TranslationLanguageDialog(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = stringResource(R.string.translation_language_description),
+                    text = description,
                     modifier = Modifier.padding(top = 4.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 13.sp,
@@ -169,14 +213,14 @@ fun TranslationLanguageDialog(
                 // Only with an empty field: it is the default rather than a
                 // language, so it has no name to match and filtering it in on a
                 // near-miss would be noise.
-                if (query.isBlank()) {
+                if (offerAppLanguage && query.isBlank()) {
                     item {
                         LanguageChoiceRow(
                             label = stringResource(R.string.translation_language_app_default),
                             detail = stringResource(R.string.translation_language_subtitle),
                             selected = selected.isBlank(),
                             onClick = {
-                                AppSettings.setTranslationLanguage("")
+                                onSelect("")
                                 onDismiss()
                             },
                         )
@@ -194,7 +238,7 @@ fun TranslationLanguageDialog(
                             ?: language.code,
                         selected = selected.equals(language.code, ignoreCase = true),
                         onClick = {
-                            AppSettings.setTranslationLanguage(language.code)
+                            onSelect(language.code)
                             onDismiss()
                         },
                     )

@@ -197,6 +197,7 @@ fun SettingsScreen(
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
     onTranslationLanguage: () -> Unit,
+    onLearningLanguage: () -> Unit,
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
     onWearOs: () -> Unit,
@@ -256,6 +257,7 @@ fun SettingsScreen(
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
+    val learningLanguage by AppSettings.learningLanguage.collectAsStateWithLifecycle()
     val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
     val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
@@ -1152,8 +1154,25 @@ fun SettingsScreen(
                         onClick = onLyricsSources,
                     )
                 }
+                val learningLanguageTitle = stringResource(R.string.learning_language)
+                row(learningLanguageTitle, "lyrics", "translate", "learn") {
+                    SettingsRow(
+                        icon = SfIcons.Translate,
+                        title = learningLanguageTitle,
+                        subtitle = if (learningLanguage.isBlank()) {
+                            stringResource(R.string.learning_language_not_set)
+                        } else {
+                            translationLanguageName(
+                                learningLanguage,
+                                AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
+                            )
+                        },
+                        trailing = { Chevron() },
+                        onClick = onLearningLanguage,
+                    )
+                }
                 val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
+                row(translationLanguageTitle, "lyrics", "translate", "native") {
                     SettingsRow(
                         icon = SfIcons.Translate,
                         title = translationLanguageTitle,

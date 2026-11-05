@@ -486,7 +486,8 @@ object AppSettings {
     val lyricsOffsetMs = MutableStateFlow(0)
 
     /**
-     * Which language the lyrics translate button translates *into*.
+     * The listener's native language: what lyrics are translated *into*, shown
+     * under each line by default.
      *
      * Blank — the default — means "whatever the app is set to", and is stored
      * as blank rather than resolved once: someone who has never touched this
@@ -495,6 +496,12 @@ object AppSettings {
      * happened to be reading the day the setting was written.
      */
     val translationLanguage = MutableStateFlow("")
+
+    /** The language the listener is learning. Blank until they have chosen one. */
+    val learningLanguage = MutableStateFlow("")
+
+    /** Whether the first-launch language picker has been answered. */
+    val languageSetupComplete = MutableStateFlow(false)
 
     /**
      * Plays a looping video behind the cover art on the player when one is
@@ -988,6 +995,8 @@ object AppSettings {
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
         translationLanguage.value = prefs.getString(KEY_TRANSLATION_LANGUAGE, "").orEmpty()
+        learningLanguage.value = prefs.getString(KEY_LEARNING_LANGUAGE, "").orEmpty()
+        languageSetupComplete.value = prefs.getBoolean(KEY_LANGUAGE_SETUP_COMPLETE, false)
         if (highPerformanceMode.value) {
             reduceAnimation.value = false
             reduceDynamicBlur.value = false
@@ -1450,6 +1459,19 @@ object AppSettings {
     fun setTranslationLanguage(value: String) {
         translationLanguage.value = value
         prefs.edit().putString(KEY_TRANSLATION_LANGUAGE, value).apply()
+    }
+
+    fun setLearningLanguage(value: String) {
+        learningLanguage.value = value
+        prefs.edit().putString(KEY_LEARNING_LANGUAGE, value).apply()
+    }
+
+    /** Saves the first-launch picker's answers and stops it showing again. */
+    fun completeLanguageSetup(learning: String, native: String) {
+        setLearningLanguage(learning)
+        setTranslationLanguage(native)
+        languageSetupComplete.value = true
+        prefs.edit().putBoolean(KEY_LANGUAGE_SETUP_COMPLETE, true).apply()
     }
 
     fun setSyncedLyrics(value: Boolean) {
@@ -2184,6 +2206,8 @@ object AppSettings {
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
+    private const val KEY_LEARNING_LANGUAGE = "learning_language"
+    private const val KEY_LANGUAGE_SETUP_COMPLETE = "language_setup_complete"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
