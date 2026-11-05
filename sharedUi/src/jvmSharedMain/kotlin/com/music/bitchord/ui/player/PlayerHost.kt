@@ -364,7 +364,7 @@ data class PartyUi(
 )
 
 sealed interface LyricsTranslationResult {
-    data class Translated(val lines: List<LyricLine>) : LyricsTranslationResult
+    data class Translated(val lines: List<LyricLine>, val sourceLanguage: String = "") : LyricsTranslationResult
     data class SameLanguage(val language: String) : LyricsTranslationResult
     data object Unavailable : LyricsTranslationResult
 }

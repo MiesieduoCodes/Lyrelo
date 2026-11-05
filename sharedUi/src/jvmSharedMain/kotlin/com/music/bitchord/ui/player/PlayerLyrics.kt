@@ -149,6 +149,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
+import com.music.bitchord.playback.LearnPlayback
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -3162,6 +3163,7 @@ internal fun rememberLyricsTranslation(
         mutableStateOf(LyricsDisplayMode.Original)
     }
     val showingTranslation = lyricsDisplayMode == LyricsDisplayMode.Translated
+    var translatedFrom by remember(trackId, translationLanguage, lyrics) { mutableStateOf<String?>(null) }
     val showingRomanization = lyricsDisplayMode == LyricsDisplayMode.Romanized
     var translationTransition by remember(trackId) { mutableIntStateOf(0) }
     var translationJob by remember(trackId, translationLanguage, lyrics) {
@@ -3218,6 +3220,7 @@ internal fun rememberLyricsTranslation(
             }
             when (result) {
                 is LyricsTranslationResult.Translated -> {
+                    translatedFrom = result.sourceLanguage.ifBlank { null }
                     translationState = LyricsTranslationUiState.Ready(result.lines)
                     lyricsDisplayMode = LyricsDisplayMode.Translated
                     if (announce) {
@@ -3259,6 +3262,15 @@ internal fun rememberLyricsTranslation(
                 requestTranslation(source, true)
             }
         }
+    }
+    // For the learning stats: whether this song is being read with its translation.
+    LaunchedEffect(trackId, translationState, lyricsDisplayMode, translatedFrom) {
+        val use = when {
+            translationState is LyricsTranslationUiState.SameLanguage -> LearnPlayback.TranslationUse.SAME_LANGUAGE
+            translationState is LyricsTranslationUiState.Ready && !showingTranslation -> LearnPlayback.TranslationUse.OFF
+            else -> LearnPlayback.TranslationUse.ON
+        }
+        LearnPlayback.reportTranslation(LearnPlayback.TranslationReport(trackId, use, translatedFrom))
     }
     // Translation is on by default: each new lyric sheet asks for it unprompted,
     // and the sub-lines open under the originals when it lands. Nothing announces

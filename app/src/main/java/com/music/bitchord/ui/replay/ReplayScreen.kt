@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -111,7 +113,14 @@ fun ReplayScreen(
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     landingPage: ReplayStoryPage = ReplayStoryPage.INTRO,
+    /** Opens on the Learning tab, as the streak on Home does. */
+    openOnLearning: Boolean = false,
 ) {
+    var learningTab by rememberSaveable { mutableStateOf(openOnLearning) }
+    val choosePeriod: (ReplayPeriod) -> Unit = {
+        learningTab = false
+        onPeriodChange(it)
+    }
     val context = LocalContext.current
     val summary = state.summary
     val leadArtwork = summary?.songs?.firstOrNull()?.song?.thumbnailUrl
@@ -174,9 +183,10 @@ fun ReplayScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
         ) {
-            item("heading") { Heading(state, onPeriodChange, dark) }
+            item("heading") { Heading(state, choosePeriod, dark, learningTab) { learningTab = true } }
 
             when {
+                learningTab -> item("learning") { LearningReplay(dark) }
                 state.loading && summary == null -> item("loading") {
                     Box(Modifier.fillMaxWidth().padding(64.dp), Alignment.Center) {
                         CircularProgressIndicator(color = textColor.copy(alpha = 0.6f))
@@ -265,7 +275,13 @@ fun ReplayScreen(
 // ── Heading ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun Heading(state: ReplayState, onPeriodChange: (ReplayPeriod) -> Unit, dark: Boolean) {
+private fun Heading(
+    state: ReplayState,
+    onPeriodChange: (ReplayPeriod) -> Unit,
+    dark: Boolean,
+    learningTab: Boolean = false,
+    onLearning: () -> Unit = {},
+) {
     val context = LocalContext.current
     val textColor = if (dark) Color.White else Color.Black
     Column(Modifier.padding(horizontal = PAGE_GUTTER + 4.dp)) {
@@ -277,12 +293,16 @@ private fun Heading(state: ReplayState, onPeriodChange: (ReplayPeriod) -> Unit, 
             color = textColor,
         )
         Text(
-            text = state.summary?.localizedLabel(context) ?: state.period.localizedChip(context),
+            text = if (learningTab) {
+                stringResource(R.string.replay_learning_subtitle)
+            } else {
+                state.summary?.localizedLabel(context) ?: state.period.localizedChip(context)
+            },
             style = MaterialTheme.typography.titleMedium,
             color = textColor.copy(alpha = 0.6f),
         )
         Spacer(Modifier.height(14.dp))
-        PeriodPicker(state.period, onPeriodChange, dark)
+        PeriodPicker(state.period, onPeriodChange, dark, learningTab, onLearning)
         Spacer(Modifier.height(18.dp))
     }
 }
@@ -296,7 +316,13 @@ private fun Heading(state: ReplayState, onPeriodChange: (ReplayPeriod) -> Unit, 
  * would make it a lie for the first thirty days of every month.
  */
 @Composable
-private fun PeriodPicker(selected: ReplayPeriod, onSelect: (ReplayPeriod) -> Unit, dark: Boolean) {
+private fun PeriodPicker(
+    selected: ReplayPeriod,
+    onSelect: (ReplayPeriod) -> Unit,
+    dark: Boolean,
+    learningSelected: Boolean = false,
+    onLearning: () -> Unit = {},
+) {
     val context = LocalContext.current
     val textColor = if (dark) Color.White else Color.Black
     // Four equal shares of the full width, each held to one line. Sized to
@@ -311,7 +337,7 @@ private fun PeriodPicker(selected: ReplayPeriod, onSelect: (ReplayPeriod) -> Uni
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         ReplayPeriod.entries.forEach { period ->
-            val active = period == selected
+            val active = period == selected && !learningSelected
             val background by animateColorAsState(
                 if (active) textColor.copy(alpha = 0.92f) else Color.Transparent,
                 tween(160),
@@ -333,6 +359,26 @@ private fun PeriodPicker(selected: ReplayPeriod, onSelect: (ReplayPeriod) -> Uni
                     .padding(horizontal = 6.dp, vertical = 8.dp),
             )
         }
+        val learningBackground by animateColorAsState(
+            if (learningSelected) textColor.copy(alpha = 0.92f) else Color.Transparent,
+            tween(160),
+            label = "learningChip",
+        )
+        Text(
+            text = stringResource(R.string.replay_learning_tab),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.W700,
+            color = if (learningSelected) if (dark) Color.Black else Color.White else textColor.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(learningBackground)
+                .clickable(onClick = onLearning)
+                .padding(horizontal = 6.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -647,3 +693,93 @@ private fun EmptyReplay(period: ReplayPeriod, dark: Boolean) {
  * top ten is a list.
  */
 private const val CHART_LENGTH = 5
+
+/** The Learning tab: the streak, today's progress and this week's summary. */
+@Composable
+private fun LearningReplay(dark: Boolean) {
+    val stats by com.music.bitchord.data.stats.LearningStats.snapshot.collectAsStateWithLifecycle()
+    val learningLanguage by com.music.bitchord.data.settings.AppSettings.learningLanguage.collectAsStateWithLifecycle()
+    val textColor = if (dark) Color.White else Color.Black
+    val todayMinutes = (stats.todayTranslatedMs / 60_000L).toInt()
+    Column(Modifier.padding(horizontal = PAGE_GUTTER + 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.LocalFireDepartment,
+                contentDescription = null,
+                tint = Color(0xFFFF7A1A),
+                modifier = Modifier.size(44.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.learning_streak_value, stats.streak),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.W800,
+                color = textColor,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = if (stats.todayQualified) {
+                stringResource(R.string.learning_today_done)
+            } else {
+                stringResource(R.string.learning_today_progress, todayMinutes)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+            color = textColor.copy(alpha = 0.75f),
+        )
+        Text(
+            text = stringResource(
+                if (stats.freezeUsedThisWeek) R.string.learning_freeze_used else R.string.learning_freeze_ready,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = textColor.copy(alpha = 0.55f),
+        )
+
+        Spacer(Modifier.height(22.dp))
+        Text(
+            text = stringResource(R.string.learning_this_week),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.W800,
+            color = textColor,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile(
+                label = stringResource(R.string.learning_minutes_in_language),
+                value = (stats.weekLearningLanguageMs / 60_000L).toString(),
+                dark = dark,
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.learning_songs_played),
+                value = stats.weekSongs.toString(),
+                dark = dark,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile(
+                label = stringResource(R.string.learning_lines_looped),
+                value = stats.weekLinesLooped.toString(),
+                dark = dark,
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.learning_current_streak),
+                value = stats.streak.toString(),
+                dark = dark,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(
+                if (learningLanguage.isBlank()) R.string.learning_no_language_note else R.string.learning_rules_note,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor.copy(alpha = 0.55f),
+        )
+        Spacer(Modifier.height(32.dp))
+    }
+}

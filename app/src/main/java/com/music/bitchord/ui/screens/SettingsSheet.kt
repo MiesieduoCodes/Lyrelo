@@ -334,6 +334,7 @@ fun SettingsScreen(
     // check by looking at the app afterwards. Held per direction, or an import's
     // result reports itself under the word "Export".
     var exportStatus by remember { mutableStateOf<String?>(null) }
+    var learningStatus by remember { mutableStateOf<String?>(null) }
     var importStatus by remember { mutableStateOf<String?>(null) }
     var confirmImport by remember { mutableStateOf(false) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
@@ -366,6 +367,28 @@ fun SettingsScreen(
      * means neither direction needs a storage permission, since the grant
      * arrives with the document they picked.
      */
+    val learningExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { target ->
+        if (target == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            learningStatus = com.music.bitchord.data.stats.LearningStats.exportTo(context, target).fold(
+                onSuccess = { context.getString(R.string.learning_export_succeeded, it) },
+                onFailure = { context.getString(R.string.learning_transfer_failed, it.message.orEmpty()) },
+            )
+        }
+    }
+    val learningImportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            learningStatus = com.music.bitchord.data.stats.LearningStats.importFrom(context, source).fold(
+                onSuccess = { context.getString(R.string.learning_import_succeeded, it) },
+                onFailure = { context.getString(R.string.learning_transfer_failed, it.message.orEmpty()) },
+            )
+        }
+    }
     val exportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { target ->
@@ -1577,6 +1600,31 @@ fun SettingsScreen(
             }
         }
 
+        if (shows(SettingsCategory.LEARNING)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.learning),
+            footer = learningStatus ?: stringResource(R.string.learning_transfer_footer),
+        ) {
+            val exportLearningTitle = stringResource(R.string.learning_export)
+            row(exportLearningTitle, "learning", "streak", "stats", "export", "backup") {
+                SettingsRow(
+                    icon = SfIcons.YourData,
+                    title = exportLearningTitle,
+                    subtitle = stringResource(R.string.learning_export_subtitle),
+                    onClick = { learningExportPicker.launch("lyrelo-learning-stats.json") },
+                )
+            }
+            val importLearningTitle = stringResource(R.string.learning_import)
+            row(importLearningTitle, "learning", "streak", "stats", "import", "restore") {
+                SettingsRow(
+                    icon = SfIcons.YourData,
+                    title = importLearningTitle,
+                    subtitle = stringResource(R.string.learning_import_subtitle),
+                    onClick = { learningImportPicker.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                )
+            }
+        }
+
         if (shows(SettingsCategory.ADVANCED)) SearchableSettingsGroup(search, header = stringResource(R.string.advanced_options)) {
             val smartAlignmentTitle = stringResource(R.string.smart_version_alignment)
             row(smartAlignmentTitle, "alignment", "sync", "waveform", "video", "audio", "skit", "intro") {
@@ -2680,6 +2728,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
     LANGUAGE(R.string.language),
+    LEARNING(R.string.learning),
     ADVANCED(R.string.advanced_options),
     ;
 
@@ -2694,6 +2743,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
             LANGUAGE -> SfIcons.Language
+            LEARNING -> SfIcons.Translate
             ADVANCED -> SfIcons.Advanced
         }
 }

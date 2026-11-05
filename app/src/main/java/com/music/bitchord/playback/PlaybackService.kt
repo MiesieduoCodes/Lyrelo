@@ -7045,6 +7045,22 @@ class PlaybackService : MediaLibraryService() {
                 }
             }
         }
+        // Using any of the Learn controls counts toward the day's learning streak.
+        scope.launch {
+            LearnPlayback.panelOpens.drop(1).collect { com.music.bitchord.data.stats.LearningStats.markLearnUsed() }
+        }
+        scope.launch {
+            combine(LearnPlayback.speed, LearnPlayback.pitchSemitones) { speed, pitch -> speed != 1f || pitch != 0 }
+                .distinctUntilChanged()
+                .collect { changed -> if (changed) com.music.bitchord.data.stats.LearningStats.markLearnUsed() }
+        }
+        scope.launch {
+            LearnPlayback.loop.collect { loop ->
+                if (loop != null) {
+                    com.music.bitchord.data.stats.LearningStats.recordLoop(loop.lastLine - loop.firstLine + 1)
+                }
+            }
+        }
         scope.launch {
             combine(LearnPlayback.speed, LearnPlayback.pitchSemitones, LearnPlayback.loop) { _, _, _ ->
                 LearnPlayback.isActive

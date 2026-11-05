@@ -126,6 +126,7 @@ internal fun rememberLyricsLearn(
         open = open && enabled,
         toggleOpen = {
             open = !open
+            if (open) LearnPlayback.notePanelOpened()
             pickingSection = false
             sectionStart = null
         },

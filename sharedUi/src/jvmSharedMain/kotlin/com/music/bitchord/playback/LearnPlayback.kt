@@ -47,6 +47,28 @@ object LearnPlayback {
         _loop.value = loop
     }
 
+    enum class TranslationUse { ON, OFF, SAME_LANGUAGE }
+
+    /** What the lyrics view knows about translation for one song, for the learning stats. */
+    data class TranslationReport(val trackId: String, val use: TranslationUse, val sourceLanguage: String?)
+
+    private val _translation = MutableStateFlow<TranslationReport?>(null)
+
+    fun reportTranslation(report: TranslationReport) {
+        _translation.value = report
+    }
+
+    /** The latest report, if it is about [trackId]. */
+    fun translationFor(trackId: String): TranslationReport? = _translation.value?.takeIf { it.trackId == trackId }
+
+    private val _panelOpens = MutableStateFlow(0)
+    /** Counts each time the Learn panel opens. */
+    val panelOpens = _panelOpens.asStateFlow()
+
+    fun notePanelOpened() {
+        _panelOpens.value++
+    }
+
     /** Back to normal playback. */
     fun turnOff() {
         _speed.value = 1f

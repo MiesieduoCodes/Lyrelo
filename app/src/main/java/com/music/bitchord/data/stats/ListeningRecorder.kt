@@ -83,10 +83,12 @@ object ListeningRecorder {
         if (counts) playCounted = true
 
         ListeningStats.record(enriched(song), step, counts)
+        LearningStats.recordListening(song.videoId, step)
 
         if (++samplesSinceFlush >= FLUSH_EVERY) {
             samplesSinceFlush = 0
             ListeningStats.flush()
+            LearningStats.flush()
         }
     }
 
@@ -104,6 +106,7 @@ object ListeningRecorder {
         playCounted = false
         samplesSinceFlush = 0
         ListeningStats.flush()
+        LearningStats.flush()
     }
 
     // ── Filling in what the queue didn't carry ──────────────────────────────

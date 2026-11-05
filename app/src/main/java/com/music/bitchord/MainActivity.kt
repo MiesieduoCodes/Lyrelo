@@ -658,6 +658,8 @@ private fun BitChordApp(
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
     var showLearningLanguage by remember { mutableStateOf(false) }
+    var replayOpensLearning by remember { mutableStateOf(false) }
+    val learningStats by com.music.bitchord.data.stats.LearningStats.snapshot.collectAsStateWithLifecycle()
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
@@ -2971,7 +2973,9 @@ private fun BitChordApp(
                                 contentPadding = listPadding,
                                 listState = replayListState,
                                 landingPage = replayLandingPage,
+                                openOnLearning = replayOpensLearning,
                             )
+                            DisposableEffect(Unit) { onDispose { replayOpensLearning = false } }
                         } else if (pageRoute == AppRoute.Spotify) {
                             SpotifyLibraryScreen(
                                 onOpenPlaylist = { playlist ->
@@ -3340,6 +3344,11 @@ private fun BitChordApp(
                             )
                         } else when ((destination as? AppDestination.Tab)?.index ?: selectedTab) {
                             TAB_HOME -> HomeScreen(
+                                learningStreak = learningStats.streak,
+                                onStreakClick = {
+                                    replayOpensLearning = true
+                                    navigator.push(AppRoute.Replay)
+                                },
                                 state = homeState,
                                 listState = homeListState,
                                 currentSong = player.song,
