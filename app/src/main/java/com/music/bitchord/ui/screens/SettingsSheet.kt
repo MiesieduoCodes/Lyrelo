@@ -194,6 +194,7 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onAccountScrobbling: () -> Unit,
     onEqualizer: () -> Unit,
+    onPlayerStyle: () -> Unit,
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
     onTranslationLanguage: () -> Unit,
@@ -981,6 +982,24 @@ fun SettingsScreen(
             // the player to fill and too narrow to stand a page beside it keeps
             // the sleeve either way. A docked pane is a phone's width, so it does
             // honour it — see [fullBleedArtworkAvailable].
+            val playerStyleTitle = stringResource(R.string.player_style)
+            row(playerStyleTitle, "player", "vinyl", "immersive", "artwork", "background") {
+                SettingsRow(
+                    icon = SfIcons.Fullscreen,
+                    title = playerStyleTitle,
+                    subtitle = stringResource(
+                        when (AppSettings.playerStyle.collectAsStateWithLifecycle().value) {
+                            com.music.bitchord.data.settings.PlayerStyle.CLASSIC -> R.string.player_style_classic
+                            com.music.bitchord.data.settings.PlayerStyle.IMMERSIVE -> R.string.player_style_immersive
+                            com.music.bitchord.data.settings.PlayerStyle.VINYL -> R.string.player_style_vinyl
+                            com.music.bitchord.data.settings.PlayerStyle.MINIMAL -> R.string.player_style_minimal
+                            com.music.bitchord.data.settings.PlayerStyle.LYRICS_FIRST -> R.string.player_style_lyrics_first
+                        },
+                    ),
+                    trailing = { Chevron() },
+                    onClick = onPlayerStyle,
+                )
+            }
             if (fullBleedArtworkAvailable(windowWidth)) {
                 val fullScreenCoverArtTitle = stringResource(R.string.full_screen_cover_art)
                 row(fullScreenCoverArtTitle, "artwork", "player") {

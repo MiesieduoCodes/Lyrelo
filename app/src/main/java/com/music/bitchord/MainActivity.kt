@@ -3047,6 +3047,8 @@ private fun BitChordApp(
                                 contentPadding = listPadding,
                                 onEditServer = { editingPartyServer = true },
                             )
+                        } else if (pageRoute == AppRoute.PlayerStyle) {
+                            com.music.bitchord.ui.screens.PlayerStyleScreen(contentPadding = listPadding)
                         } else if (pageRoute == AppRoute.Equalizer) {
                             EqualizerScreen(
                                 contentPadding = listPadding,
@@ -3081,6 +3083,7 @@ private fun BitChordApp(
                                 onSignOut = { viewModel.signOut() },
                                 onAccountScrobbling = { navigator.push(AppRoute.AccountScrobbling) },
                                 onEqualizer = { navigator.push(AppRoute.Equalizer) },
+                                onPlayerStyle = { navigator.push(AppRoute.PlayerStyle) },
                                 onOpenReplay = {
                                     replayLandingPage = ReplayStoryPage.INTRO
                                     navigator.push(AppRoute.Replay)
@@ -3749,6 +3752,7 @@ private fun BitChordApp(
                         AppRoute.Sources -> stringResource(R.string.sources)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
+                        AppRoute.PlayerStyle -> stringResource(R.string.player_style)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
                         AppRoute.Settings -> stringResource(R.string.settings)
                         is AppRoute.SettingsSection -> stringResource(route.category.title)

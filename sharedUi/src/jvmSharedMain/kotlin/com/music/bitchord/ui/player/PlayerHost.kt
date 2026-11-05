@@ -10,6 +10,9 @@ import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AudioQuality
+import com.music.bitchord.data.settings.ArtworkCorner
+import com.music.bitchord.data.settings.PlayerBackground
+import com.music.bitchord.data.settings.PlayerStyle
 import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.settings.SmartAnalysis
 import com.music.bitchord.data.settings.MixBlend
@@ -242,6 +245,10 @@ interface PlayerSettingsSource {
     val hideStatusBar: StateFlow<Boolean>
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val legacyMeshGradient: StateFlow<Boolean>
+    val playerStyle: StateFlow<PlayerStyle>
+    val playerBackground: StateFlow<PlayerBackground>
+    val artworkCorner: StateFlow<ArtworkCorner>
+    val showLyricStrip: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
     val lyricsOffsetMs: StateFlow<Int>
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>

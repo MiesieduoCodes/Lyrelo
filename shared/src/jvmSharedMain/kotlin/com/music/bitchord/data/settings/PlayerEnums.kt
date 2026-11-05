@@ -33,3 +33,12 @@ enum class LastPlayerScreen {
     LYRICS,
     QUEUE,
 }
+
+/** The layout of the full player. Classic is the player as it has always been. */
+enum class PlayerStyle { CLASSIC, IMMERSIVE, VINYL, MINIMAL, LYRICS_FIRST }
+
+/** What fills the player behind its artwork and controls. */
+enum class PlayerBackground { ARTWORK_COLORS, BLUR, SOLID_DARK, ANIMATED_GRADIENT }
+
+/** How far the artwork's corners are rounded, in dp. Vinyl is always round. */
+enum class ArtworkCorner(val dp: Int) { NONE(0), SMALL(8), MEDIUM(20), LARGE(36) }

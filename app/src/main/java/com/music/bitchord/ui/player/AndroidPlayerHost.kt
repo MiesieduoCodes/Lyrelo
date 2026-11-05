@@ -92,6 +92,10 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val spotifyCanvasAutoHide get() = AppSettings.spotifyCanvasAutoHide
         override val syncedLyrics get() = AppSettings.syncedLyrics
         override val translationLanguage get() = AppSettings.translationLanguage
+        override val playerStyle get() = AppSettings.playerStyle
+        override val playerBackground get() = AppSettings.playerBackground
+        override val artworkCorner get() = AppSettings.artworkCorner
+        override val showLyricStrip get() = AppSettings.showLyricStrip
         override val versionAlignmentInProgress get() = AppSettings.versionAlignmentInProgress
 
         override fun setLastPlayerScreen(value: LastPlayerScreen) = AppSettings.setLastPlayerScreen(value)

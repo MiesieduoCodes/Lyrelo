@@ -573,6 +573,11 @@ object AppSettings {
      */
     val legacyMeshGradient = MutableStateFlow(false)
 
+    val playerStyle = MutableStateFlow(PlayerStyle.CLASSIC)
+    val playerBackground = MutableStateFlow(PlayerBackground.BLUR)
+    val artworkCorner = MutableStateFlow(ArtworkCorner.SMALL)
+    val showLyricStrip = MutableStateFlow(true)
+
     /** Restores the expanded player to the surface the listener left open. */
     val lastPlayerScreen = MutableStateFlow(LastPlayerScreen.MAIN)
 
@@ -1009,6 +1014,10 @@ object AppSettings {
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         legacyMeshGradient.value = prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)
+        playerStyle.value = enumPref(KEY_PLAYER_STYLE, PlayerStyle.CLASSIC)
+        playerBackground.value = enumPref(KEY_PLAYER_BACKGROUND, PlayerBackground.BLUR)
+        artworkCorner.value = enumPref(KEY_ARTWORK_CORNER, ArtworkCorner.SMALL)
+        showLyricStrip.value = prefs.getBoolean(KEY_SHOW_LYRIC_STRIP, true)
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
                 prefs.getString(KEY_LAST_PLAYER_SCREEN, null) ?: LastPlayerScreen.MAIN.name,
@@ -1614,6 +1623,29 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_FULL_BLEED_ARTWORK, value).apply()
     }
 
+    private inline fun <reified T : Enum<T>> enumPref(key: String, default: T): T =
+        runCatching { enumValueOf<T>(prefs.getString(key, null).orEmpty()) }.getOrDefault(default)
+
+    fun setPlayerStyle(value: PlayerStyle) {
+        playerStyle.value = value
+        prefs.edit().putString(KEY_PLAYER_STYLE, value.name).apply()
+    }
+
+    fun setPlayerBackground(value: PlayerBackground) {
+        playerBackground.value = value
+        prefs.edit().putString(KEY_PLAYER_BACKGROUND, value.name).apply()
+    }
+
+    fun setArtworkCorner(value: ArtworkCorner) {
+        artworkCorner.value = value
+        prefs.edit().putString(KEY_ARTWORK_CORNER, value.name).apply()
+    }
+
+    fun setShowLyricStrip(value: Boolean) {
+        showLyricStrip.value = value
+        prefs.edit().putBoolean(KEY_SHOW_LYRIC_STRIP, value).apply()
+    }
+
     fun setLegacyMeshGradient(value: Boolean) {
         legacyMeshGradient.value = value
         prefs.edit().putBoolean(KEY_LEGACY_MESH_GRADIENT, value).apply()
@@ -2207,6 +2239,10 @@ object AppSettings {
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_LEARNING_LANGUAGE = "learning_language"
+    private const val KEY_PLAYER_STYLE = "player_style"
+    private const val KEY_PLAYER_BACKGROUND = "player_background"
+    private const val KEY_ARTWORK_CORNER = "artwork_corner"
+    private const val KEY_SHOW_LYRIC_STRIP = "show_lyric_strip"
     private const val KEY_LANGUAGE_SETUP_COMPLETE = "language_setup_complete"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"

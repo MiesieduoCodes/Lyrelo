@@ -10,6 +10,9 @@ import androidx.compose.ui.unit.Constraints
 import com.music.bitchord.ui.graphics.FADE_CURVE_STOPS
 import com.music.bitchord.ui.graphics.smootherStep
 import com.music.bitchord.playback.PlaybackPosition
+import com.music.bitchord.data.settings.ArtworkCorner
+import com.music.bitchord.data.settings.PlayerBackground
+import com.music.bitchord.data.settings.PlayerStyle
 import com.music.bitchord.playback.LearnPlayback
 import com.music.bitchord.sharedui.resources.*
 
@@ -41,6 +44,7 @@ import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -63,6 +67,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
@@ -79,6 +84,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -232,6 +238,10 @@ internal const val SEEK_SETTLE_TOLERANCE_MS = 1_500L
 internal const val SEEK_SETTLE_TIMEOUT_MS = 4_000L
 
 private val THUMB_SIZE = 54.dp
+private const val MINIMAL_ART_SCALE = 0.55f
+private const val VINYL_HOLE_FRACTION = 0.1f
+/** One turn every four seconds. */
+private const val VINYL_DEGREES_PER_NANO = 360f / 4_000_000_000f
 private val HEADER_HEIGHT = 60.dp
 private val ART_TITLE_GAP = 20.dp
 /**
@@ -865,7 +875,19 @@ fun NowPlayingScreen(
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
     val videoMode = showsMusicVideo(song)
-    val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }?.let {
+    val playerStyle by PlayerSettings.playerStyle.collectAsStateWithLifecycle()
+    val playerBackground by PlayerSettings.playerBackground.collectAsStateWithLifecycle()
+    val artworkCorner by PlayerSettings.artworkCorner.collectAsStateWithLifecycle()
+    val showLyricStrip by PlayerSettings.showLyricStrip.collectAsStateWithLifecycle()
+    // These layouts apply to the portrait player. Landscape keeps its two columns.
+    val styledLayout = !landscapePlayerAvailable(windowWidth, windowHeight) && !videoMode
+    val vinylStyle = styledLayout && playerStyle == PlayerStyle.VINYL
+    val minimalStyle = styledLayout && playerStyle == PlayerStyle.MINIMAL
+    val lyricsFirstStyle = styledLayout && playerStyle == PlayerStyle.LYRICS_FIRST
+    val immersiveStyle = styledLayout && playerStyle == PlayerStyle.IMMERSIVE
+    val canvas = rememberCanvasArtwork(song)
+        ?.takeUnless { videoMode || vinylStyle || minimalStyle || lyricsFirstStyle }
+        ?.let {
         // Apple's 3:4 rendition runs under the whole phone screen, the way its
         // own player shows it; the square one stays the fallback.
         val tall = it.portraitUrl
@@ -999,6 +1021,10 @@ fun NowPlayingScreen(
     val closeLyrics: () -> Unit = {
         lyricsControlsOpen = false
         lyricsOpen = false
+    }
+    // Lyrics-first opens on the lyrics, and comes back to them on each new song.
+    LaunchedEffect(lyricsFirstStyle, song.videoId) {
+        if (lyricsFirstStyle && !lyricsOpen) openLyrics()
     }
     val toggleLyrics: () -> Unit = {
         if (lyricsOpen) closeLyrics() else openLyrics()
@@ -1211,6 +1237,18 @@ fun NowPlayingScreen(
         label = "artScale",
     )
 
+    // Kept between pauses, so the record stops where it is and carries on from there.
+    val vinylSpin = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(vinylStyle, isPlaying) {
+        if (!vinylStyle || !isPlaying) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        while (true) {
+            val now = withFrameNanos { it }
+            vinylSpin.floatValue = (vinylSpin.floatValue + (now - last) * VINYL_DEGREES_PER_NANO) % 360f
+            last = now
+        }
+    }
+
     val volume = rememberPlayerVolume()
     // Present when you arrive, out of the way once you are actually reading.
     //
@@ -1223,8 +1261,8 @@ fun NowPlayingScreen(
     // Never while a finger is on the scrubber or the volume bar: those are the
     // two controls that are *being used* while nothing else on screen moves,
     // and timing out underneath them would take the thing away mid-gesture.
-    LaunchedEffect(lyricsOpen, lyricsControlsOpen, scrub.scrubbing, volume.dragging) {
-        if (lyricsOpen && lyricsControlsOpen && !scrub.scrubbing && !volume.dragging) {
+    LaunchedEffect(lyricsOpen, lyricsControlsOpen, scrub.scrubbing, volume.dragging, lyricsFirstStyle) {
+        if (lyricsOpen && lyricsControlsOpen && !scrub.scrubbing && !volume.dragging && !lyricsFirstStyle) {
             delay(LYRICS_CONTROLS_IDLE_MS)
             lyricsControlsOpen = false
         }
@@ -1318,9 +1356,9 @@ fun NowPlayingScreen(
     // still-art full-bleed preference. Other providers and static artwork keep
     // answering to that preference exactly as before.
     // A music video sits in the card's place at its own 16:9, never full bleed.
-    val heroMode = !videoMode && (
+    val heroMode = !videoMode && !vinylStyle && !minimalStyle && !lyricsFirstStyle && !immersiveStyle && (
         spotifyCanvasOnPhone ||
-            (fullBleedArt && playerFillsWindow(windowWidth))
+            (fullBleedArt && artworkCorner == ArtworkCorner.SMALL && playerFillsWindow(windowWidth))
         )
 
     // Whether there's a still image to blow out — a placeholder tile is a card
@@ -1699,7 +1737,7 @@ fun NowPlayingScreen(
         // Straight away when it is the main player's backdrop too: the decode
         // and blur run off the main thread, and the last cover's blur is held
         // on screen until this one is ready.
-        prepare = !legacyMesh || landscape || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
+        prepare = !legacyMesh || playerBackground == PlayerBackground.BLUR || landscape || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
             playerPrewarmStage >= 1,
     )
     // One movable Image node, not two backdrop call sites. Compose carries it
@@ -2312,17 +2350,22 @@ fun NowPlayingScreen(
                 // Legacy mesh is the whole backdrop on every page, so the lyrics and
                 // queue panels must not crossfade the blurred artwork over it. A
                 // full-screen Spotify Canvas is its own backdrop until a panel opens.
+                val meshChosen = playerBackground == PlayerBackground.ARTWORK_COLORS ||
+                    playerBackground == PlayerBackground.ANIMATED_GRADIENT
+                val solidBackdrop = playerBackground == PlayerBackground.SOLID_DARK && !spotifyCanvasPresentation
                 val legacyMeshBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation && legacyMesh
                 val fullArtworkBackdropAlpha by animateFloatAsState(
                     targetValue = if (
-                        !legacyMeshBackdrop &&
+                        !legacyMeshBackdrop && !meshChosen && !solidBackdrop &&
                         (tabletArtworkBackdrop || fullArtworkBlurImage != null) &&
                         (!spotifyCanvasPresentation || lyricsOpen || queueOpen)
                     ) 1f else 0f,
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",
                 )
-                if (legacyMeshBackdrop) {
+                if (solidBackdrop) {
+                    Box(Modifier.fillMaxSize().background(Color(0xFF0C0C0E)))
+                } else if (legacyMeshBackdrop || (meshChosen && !spotifyCanvasPresentation)) {
                     // v1.5's backdrop, restored verbatim: no seam, because the blobs
                     // are not anchored to anything on screen — they fill the player and
                     // the artwork simply sits on top of them. Keyed on the track, so
@@ -2333,6 +2376,7 @@ fun NowPlayingScreen(
                     MeshGradientBackground(
                         palette = rememberArtworkColors(remoteArt, canvasFrame),
                         trackKey = song.videoId,
+                        continuous = playerBackground == PlayerBackground.ANIMATED_GRADIENT,
                         modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
                     )
                 }
@@ -2791,8 +2835,20 @@ fun NowPlayingScreen(
                         // takes the gaps below to catch up with a change in their own
                         // height: a sleeve a few dp under for one frame is a better
                         // failure than a credits row overhanging the lyric strip.
-                        val fullArt = minOf(wantArt, maxHeight - ART_TITLE_GAP - HEADER_HEIGHT)
+                        val fullArtBase = minOf(wantArt, maxHeight - ART_TITLE_GAP - HEADER_HEIGHT)
                             .coerceAtLeast(THUMB_SIZE)
+                        val fullArt = if (minimalStyle) {
+                            (fullArtBase * MINIMAL_ART_SCALE).coerceAtLeast(THUMB_SIZE)
+                        } else {
+                            fullArtBase
+                        }
+                        // Lyrics-first keeps its small artwork and credits under the
+                        // lyrics, just above the controls, rather than over them.
+                        val collapsedTop = if (lyricsFirstStyle) {
+                            (maxHeight - HEADER_HEIGHT).coerceAtLeast(0.dp)
+                        } else {
+                            0.dp
+                        }
                         // What's left over once the sleeve, the gap and the credits have
                         // had theirs. A few dp on a phone; the better part of a
                         // centimetre on anything taller, and since the group is centred,
@@ -2872,12 +2928,12 @@ fun NowPlayingScreen(
                         // Functions of the collapse, called at placement and measure
                         // — see [p]. Composition never reads them.
                         fun artSize(): Dp = lerp(fullArt, THUMB_SIZE, p())
-                        fun artTop(): Dp = lerp(groupTop, 0.dp, p())
+                        fun artTop(): Dp = lerp(groupTop, collapsedTop, p())
                         // Expanded and height-bound, the sleeve is narrower than the
                         // player and has to be centred in it; collapsed, it belongs
                         // hard against the left edge with the credits beside it.
                         fun artStart(): Dp = lerp((maxWidth - fullArt) / 2, 0.dp, p())
-                        fun regularTitleTop(): Dp = lerp(groupTop + fullArt + ART_TITLE_GAP, 0.dp, p())
+                        fun regularTitleTop(): Dp = lerp(groupTop + fullArt + ART_TITLE_GAP, collapsedTop, p())
                         // Once Spotify's control deck has left, keep the only remaining
                         // player chrome against the bottom edge instead of stranding it
                         // where the artwork's title normally sits near mid-screen.
@@ -3065,7 +3121,9 @@ fun NowPlayingScreen(
                         // it docks.
                         fun sleeveShown(): Float = bannerShown() * dockT()
                         fun sleeveCorner(): Dp {
-                            val corner = 8.dp * (1f - sleeveShown())
+                            // Big enough to be a circle at any size the record is drawn.
+                            val base = if (vinylStyle) 2_000.dp else artworkCorner.dp.dp
+                            val corner = base * (1f - sleeveShown())
                             val t = dockT()
                             return if (dock == null || t >= 1f) corner else lerp(dock.miniArtCorner(), corner, t)
                         }
@@ -3313,6 +3371,7 @@ fun NowPlayingScreen(
                                 // [PlayerArtwork.loaded] still flips the moment it does.
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .graphicsLayer { if (vinylStyle) rotationZ = vinylSpin.floatValue }
                                     .drawWithContent {
                                         val frame = still()
                                         if (frame == null) {
@@ -3329,6 +3388,17 @@ fun NowPlayingScreen(
                                     },
                             )
 
+                            if (vinylStyle) {
+                                // The record's spindle hole.
+                                Box(
+                                    Modifier
+                                        .align(Alignment.Center)
+                                        .fillMaxSize(VINYL_HOLE_FRACTION)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.85f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                                )
+                            }
                             // Where the clip plays when it can't have the banner:
                             // inside the same clip as the still art, taking the
                             // sleeve's corners, shadow and paused shrink for free.
@@ -3614,7 +3684,7 @@ fun NowPlayingScreen(
                                         MarqueeText(
                                             text = song.title,
                                             style = MaterialTheme.typography.titleLarge.copy(
-                                                fontSize = 20.sp,
+                                                fontSize = if (minimalStyle && !lyricsOpen && !queueOpen) 28.sp else 20.sp,
                                             ),
                                             color = Color.White,
                                             enabled = scrolling,
@@ -3723,7 +3793,10 @@ fun NowPlayingScreen(
                                     reduceMotion = lyricsTranslation.reduceMotion,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(top = HEADER_HEIGHT)
+                                        .padding(
+                                            top = if (lyricsFirstStyle) 0.dp else HEADER_HEIGHT,
+                                            bottom = if (lyricsFirstStyle) HEADER_HEIGHT else 0.dp,
+                                        )
                                         // Keep the prepared list measured but completely
                                         // outside hit-testing/drawing until it is needed.
                                         .offset {
@@ -3746,9 +3819,9 @@ fun NowPlayingScreen(
                                         isPlaying = isPlaying && position.advancing,
                                         active = lyricsPanelVisible,
                                         onSeekToLine = seekToLyric,
-                                        controlsOpen = lyricsControlsOpen,
+                                        controlsOpen = lyricsControlsOpen || lyricsFirstStyle,
                                         onRevealControls = { lyricsControlsOpen = true },
-                                        onHideControls = { lyricsControlsOpen = false },
+                                        onHideControls = { if (!lyricsFirstStyle) lyricsControlsOpen = false },
                                         translationProgress = particleProgress,
                                         onScrollingChange = { lyricsScrolling = it },
                                         canPick = lyricsShareEnabled,
@@ -3773,7 +3846,7 @@ fun NowPlayingScreen(
                             // for reading, and a control parked over the words when
                             // nobody asked for the controls is one more thing between
                             // the reader and them.
-                            val translateShown = lyricsPanelVisible && lyricsControlsOpen
+                            val translateShown = lyricsPanelVisible && (lyricsControlsOpen || lyricsFirstStyle)
                             val translateFade by animateFloatAsState(
                                 targetValue = if (translateShown) 1f else 0f,
                                 animationSpec = tween(if (translateShown) 220 else 160),
@@ -3783,6 +3856,7 @@ fun NowPlayingScreen(
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.BottomStart)
+                                        .padding(bottom = if (lyricsFirstStyle) HEADER_HEIGHT else 0.dp)
                                         .graphicsLayer { alpha = translateFade },
                                 ) {
                                     RomanizationToggleButton(
@@ -3795,6 +3869,7 @@ fun NowPlayingScreen(
                                 Row(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
+                                        .padding(bottom = if (lyricsFirstStyle) HEADER_HEIGHT else 0.dp)
                                         .graphicsLayer { alpha = translateFade },
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
@@ -3818,7 +3893,12 @@ fun NowPlayingScreen(
                                     learn = lyricsLearn,
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        .padding(
+                                            start = 12.dp,
+                                            end = 12.dp,
+                                            top = 8.dp,
+                                            bottom = if (lyricsFirstStyle) HEADER_HEIGHT else 8.dp,
+                                        ),
                                 )
                             }
                             // The bar arrives and leaves without a transition of its own:
@@ -3904,7 +3984,7 @@ fun NowPlayingScreen(
                         // (see [LyricsPanel]'s bottom-half tap), so nothing brings the
                         // player back under somebody choosing lines.
                         visible = !lyricPicker.picking &&
-                            (!lyricsOpen || lyricsControlsOpen) &&
+                            (!lyricsOpen || lyricsControlsOpen || lyricsFirstStyle) &&
                             (!queueOpen || queueControlsOpen) &&
                             (!spotifyCanvasPresentation || spotifyCanvasControlsOpen || mixing),
                         reveal = playerDeckReveal,
@@ -3929,7 +4009,18 @@ fun NowPlayingScreen(
                     Column(
                         modifier = Modifier
                             .widthIn(max = PLAYER_MAX_WIDTH)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .then(
+                                // Over blurred artwork, a pale pane reads as frosted glass.
+                                if (immersiveStyle) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(28.dp))
+                                        .background(Color.White.copy(alpha = 0.12f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(28.dp))
+                                } else {
+                                    Modifier
+                                },
+                            ),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                     // Current lyric, one line, directly above the scrubber. It stays in
@@ -3944,7 +4035,7 @@ fun NowPlayingScreen(
                     // accompanied by a dedicated lyrics button in the bottom row. Its
                     // one-line slot remains, invisibly, so opening lyrics cannot grow
                     // the half-player merely to make room for the source label.
-                    if (!lyricsOpen && syncedLyricsEnabled) {
+                    if (!lyricsOpen && syncedLyricsEnabled && (showLyricStrip || landscape)) {
                         CurrentLyricStrip(
                             lines = lyricsTranslation.displayedLyrics,
                             trackKey = song.videoId,
