@@ -488,6 +488,35 @@ object LyricsTranslation {
         .lowercase(Locale.ROOT)
         .replace(Regex("\\s+"), " ")
 
+    /**
+     * One short sentence into [targetLanguageTag], or null if the translator
+     * can't be reached. For the DJ's spoken lines; lyrics go through [translate].
+     */
+    suspend fun translateText(text: String, targetLanguageTag: String): String? {
+        val target = targetLanguageTag.trim()
+        if (text.isBlank() || target.isBlank()) return null
+        val body = FormBody.Builder()
+            .add("client", "dict-chrome-ex")
+            .add("sl", "auto")
+            .add("tl", target)
+            .add("dt", "t")
+            .add("q", text)
+            .build()
+        val request = Request.Builder().url(ENDPOINT).post(body).build()
+        val response = try {
+            client.newCall(request).awaitBody()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: IOException) {
+            return null
+        }
+        return runCatching {
+            json.parseToJsonElement(response).jsonArray[0].jsonArray.joinToString("") { segment ->
+                segment.jsonArray.getOrNull(0)?.jsonPrimitive?.contentOrNull.orEmpty()
+            }.trim()
+        }.getOrNull()?.ifBlank { null }
+    }
+
     private suspend fun Call.awaitBody(): String = suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {

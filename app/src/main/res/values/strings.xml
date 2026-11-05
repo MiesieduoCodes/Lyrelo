@@ -418,6 +418,10 @@
     <string name="clear_name">Clear name</string>
     <string name="translation_language">Native language</string>
     <string name="translation_language_description">Lyrics are translated into this language.</string>
+    <string name="dj">Lyrelo DJ</string>
+    <string name="dj_subtitle">A voice between songs, every few tracks: what\'s next, a phrase from the last song, and your streak. Uses your phone\'s text-to-speech.</string>
+    <string name="dj_learning_language">DJ speaks your learning language</string>
+    <string name="dj_learning_language_subtitle">Phrases are always explained in your native language.</string>
     <string name="learning">Learning</string>
     <string name="learning_export">Export learning stats</string>
     <string name="learning_export_subtitle">Save your streak and learning stats to a file</string>

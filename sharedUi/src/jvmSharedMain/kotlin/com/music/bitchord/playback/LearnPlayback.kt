@@ -61,6 +61,21 @@ object LearnPlayback {
     /** The latest report, if it is about [trackId]. */
     fun translationFor(trackId: String): TranslationReport? = _translation.value?.takeIf { it.trackId == trackId }
 
+    /** A short line from a translated song, with its meaning, for the DJ to teach. */
+    data class Phrase(val trackId: String, val original: String, val translated: String, val sourceLanguage: String)
+
+    private val phrases = object : LinkedHashMap<String, Phrase>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, Phrase>) = size > 8
+    }
+
+    @Synchronized
+    fun reportPhrase(phrase: Phrase) {
+        phrases[phrase.trackId] = phrase
+    }
+
+    @Synchronized
+    fun phraseFor(trackId: String): Phrase? = phrases[trackId]
+
     private val _panelOpens = MutableStateFlow(0)
     /** Counts each time the Learn panel opens. */
     val panelOpens = _panelOpens.asStateFlow()

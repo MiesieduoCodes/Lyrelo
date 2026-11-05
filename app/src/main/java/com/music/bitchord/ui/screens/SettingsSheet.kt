@@ -335,6 +335,8 @@ fun SettingsScreen(
     // result reports itself under the word "Export".
     var exportStatus by remember { mutableStateOf<String?>(null) }
     var learningStatus by remember { mutableStateOf<String?>(null) }
+    val djEnabled by AppSettings.djEnabled.collectAsStateWithLifecycle()
+    val djLearningLanguage by AppSettings.djSpeaksLearningLanguage.collectAsStateWithLifecycle()
     var importStatus by remember { mutableStateOf<String?>(null) }
     var confirmImport by remember { mutableStateOf(false) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
@@ -1605,6 +1607,33 @@ fun SettingsScreen(
             header = stringResource(R.string.learning),
             footer = learningStatus ?: stringResource(R.string.learning_transfer_footer),
         ) {
+            val djTitle = stringResource(R.string.dj)
+            row(djTitle, "dj", "voice", "speak", "talk", "learning") {
+                SettingsRow(
+                    icon = SfIcons.Translate,
+                    title = djTitle,
+                    subtitle = stringResource(R.string.dj_subtitle),
+                    trailing = { IosSwitch(checked = djEnabled, onCheckedChange = AppSettings::setDjEnabled) },
+                    onClick = { AppSettings.setDjEnabled(!djEnabled) },
+                )
+            }
+            if (djEnabled) {
+                val djLanguageTitle = stringResource(R.string.dj_learning_language)
+                row(djLanguageTitle, "dj", "voice", "language") {
+                    SettingsRow(
+                        icon = SfIcons.Translate,
+                        title = djLanguageTitle,
+                        subtitle = stringResource(R.string.dj_learning_language_subtitle),
+                        trailing = {
+                            IosSwitch(
+                                checked = djLearningLanguage,
+                                onCheckedChange = AppSettings::setDjSpeaksLearningLanguage,
+                            )
+                        },
+                        onClick = { AppSettings.setDjSpeaksLearningLanguage(!djLearningLanguage) },
+                    )
+                }
+            }
             val exportLearningTitle = stringResource(R.string.learning_export)
             row(exportLearningTitle, "learning", "streak", "stats", "export", "backup") {
                 SettingsRow(

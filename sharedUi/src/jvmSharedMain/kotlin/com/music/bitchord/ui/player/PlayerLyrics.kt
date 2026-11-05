@@ -3221,6 +3221,11 @@ internal fun rememberLyricsTranslation(
             when (result) {
                 is LyricsTranslationResult.Translated -> {
                     translatedFrom = result.sourceLanguage.ifBlank { null }
+                    teachablePhrase(source, result.lines)?.let { (original, translated) ->
+                        LearnPlayback.reportPhrase(
+                            LearnPlayback.Phrase(trackId, original, translated, result.sourceLanguage),
+                        )
+                    }
                     translationState = LyricsTranslationUiState.Ready(result.lines)
                     lyricsDisplayMode = LyricsDisplayMode.Translated
                     if (announce) {
@@ -3381,4 +3386,20 @@ internal fun rememberLyricsTranslation(
         toggleTranslation = toggleTranslation,
         toggleRomanization = toggleRomanization,
     )
+}
+
+/**
+ * A line short enough to teach out loud, with its translation: three to seven
+ * words, changed by the translator, from the middle of the song where the
+ * chorus usually is.
+ */
+private fun teachablePhrase(original: List<LyricLine>, translated: List<LyricLine>): Pair<String, String>? {
+    val pairs = original.zip(translated).filter { (from, to) ->
+        val words = from.text.split(' ').count { it.isNotBlank() }
+        words in 3..7 && to.text.isNotBlank() && !from.text.equals(to.text, ignoreCase = true) &&
+            !from.text.startsWith("[")
+    }
+    if (pairs.isEmpty()) return null
+    val (from, to) = pairs[pairs.size / 2]
+    return from.text to to.text
 }

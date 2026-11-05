@@ -58,6 +58,7 @@ object ListeningRecorder {
      */
     @Synchronized
     fun onSample(song: Song, durationMs: Long) {
+        com.music.bitchord.playback.LyreloDj.onPlaying(song)
         val now = System.currentTimeMillis()
         if (song.videoId != currentId) {
             // A new track anchors the clock and contributes nothing yet — see
