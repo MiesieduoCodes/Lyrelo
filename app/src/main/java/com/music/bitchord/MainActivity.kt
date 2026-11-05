@@ -1095,6 +1095,29 @@ private fun BitChordApp(
     // control taken away — see [ListenTogether.State.controlsLocked].
     val hostOnlyMessage = stringResource(R.string.listen_together_host_only_notice)
     val showHostOnlyNotice: () -> Unit = { showQueueNotice(hostOnlyMessage) }
+    // Lyrelo DJ: a mix with a voice, started from Home or Library.
+    val djHost = remember {
+        object : com.music.bitchord.playback.DjSession.Host {
+            override suspend fun play(songs: List<Song>) {
+                controller?.playSongs(songs, 0)
+            }
+
+            override suspend fun queueNext(songs: List<Song>) {
+                val c = controller ?: return
+                c.addMediaItems(
+                    c.currentMediaItemIndex + 1,
+                    songs.map { it.asQueueEntry(QueueTier.USER_QUEUE).toMediaItem() },
+                )
+            }
+        }
+    }
+    val startDj: () -> Unit = {
+        com.music.bitchord.playback.DjSession.start(
+            djHost,
+            com.music.bitchord.playback.DjSession.displayName(ListenTogether.nickname(), account?.name),
+        )
+        showNowPlaying = true
+    }
 
     /**
      * Whether the host has taken the music, and say so if they have.
@@ -3344,6 +3367,34 @@ private fun BitChordApp(
                             )
                         } else when ((destination as? AppDestination.Tab)?.index ?: selectedTab) {
                             TAB_HOME -> HomeScreen(
+                                quickTiles = com.music.bitchord.ui.screens.HomeQuickTiles(
+                                    onDj = startDj,
+                                    continueSubtitle = player.song?.title,
+                                    onContinue = {
+                                        if (player.song != null) showNowPlaying = true else startDj()
+                                    },
+                                    practiceSubtitle = AppSettings.learningLanguage.value
+                                        .takeIf { it.isNotBlank() }
+                                        ?.let { com.music.bitchord.data.lyrics.translationLanguageName(it, java.util.Locale.getDefault()) },
+                                    onPractice = {
+                                        val learning = AppSettings.learningLanguage.value
+                                        if (learning.isBlank()) {
+                                            showLearningLanguage = true
+                                        } else {
+                                            scope.launch {
+                                                val name = com.music.bitchord.data.lyrics.translationLanguageName(learning, java.util.Locale.ENGLISH)
+                                                val songs = YtMusicRepository.search("popular $name songs", SearchFilter.SONGS)
+                                                    .getOrNull().orEmpty()
+                                                    .mapNotNull { (it as? SearchResult.Track)?.song ?: (it as? SearchResult.TopTrack)?.song }
+                                                if (songs.isNotEmpty()) {
+                                                    controller?.playSongs(songs.shuffled(), 0)
+                                                    showNowPlaying = true
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onMoods = { selectedTab = TAB_EXPLORE },
+                                ),
                                 learningStreak = learningStats.streak,
                                 onStreakClick = {
                                     replayOpensLearning = true
@@ -3632,6 +3683,7 @@ private fun BitChordApp(
                                 },
                             )
                             else -> LibraryScreen(
+                                onStartDj = startDj,
                                 signedIn = signedIn,
                                 state = libraryState,
                                 listState = libraryListState,

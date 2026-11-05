@@ -128,6 +128,8 @@ fun HomeScreen(
     /** Days in a row of learning, shown with a flame beside the logo when above zero. */
     learningStreak: Int = 0,
     onStreakClick: (() -> Unit)? = null,
+    /** Lyrelo's big colour blocks under the heading. Null leaves them off. */
+    quickTiles: HomeQuickTiles? = null,
     signedIn: Boolean = true,
     onSignIn: (() -> Unit)? = null,
     /**
@@ -199,6 +201,9 @@ fun HomeScreen(
         ) {
             if (title != null) {
                 item { HomeTitle(title, learningStreak, onStreakClick) }
+            }
+            if (quickTiles != null) {
+                item(key = "quick-tiles") { QuickTileGrid(quickTiles) }
             }
             if (!signedIn && onSignIn != null) {
                 item {
@@ -1188,5 +1193,100 @@ private fun StreakPill(days: Int, onClick: (() -> Unit)?) {
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
         )
+    }
+}
+
+/** What Lyrelo's four colour blocks on Home do. */
+class HomeQuickTiles(
+    val onDj: () -> Unit,
+    val continueSubtitle: String?,
+    val onContinue: () -> Unit,
+    val practiceSubtitle: String?,
+    val onPractice: () -> Unit,
+    val onMoods: () -> Unit,
+)
+
+@Composable
+private fun QuickTileGrid(tiles: HomeQuickTiles) {
+    Column(
+        Modifier.padding(horizontal = PAGE_GUTTER).padding(bottom = 18.dp),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+    ) {
+        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+            QuickTile(
+                title = stringResource(Res.string.lyrelo_dj),
+                subtitle = stringResource(Res.string.lyrelo_dj_subtitle),
+                colors = listOf(Color(0xFF2A1250), Color(0xFF8B2F67)),
+                onClick = tiles.onDj,
+                modifier = Modifier.weight(1f),
+                orb = true,
+            )
+            QuickTile(
+                title = stringResource(Res.string.home_tile_continue),
+                subtitle = tiles.continueSubtitle,
+                colors = listOf(Color(0xFF0E7490), Color(0xFF155E75)),
+                onClick = tiles.onContinue,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+            QuickTile(
+                title = stringResource(Res.string.home_tile_practice),
+                subtitle = tiles.practiceSubtitle,
+                colors = listOf(Color(0xFFB45309), Color(0xFF9A3412)),
+                onClick = tiles.onPractice,
+                modifier = Modifier.weight(1f),
+            )
+            QuickTile(
+                title = stringResource(Res.string.home_tile_moods),
+                subtitle = stringResource(Res.string.home_tile_moods_subtitle),
+                colors = listOf(Color(0xFF15803D), Color(0xFF166534)),
+                onClick = tiles.onMoods,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickTile(
+    title: String,
+    subtitle: String?,
+    colors: List<Color>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    orb: Boolean = false,
+) {
+    Box(
+        modifier
+            .height(92.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(colors))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        if (orb) {
+            com.music.bitchord.ui.player.LyreloDjOrb(
+                modifier = Modifier.align(Alignment.TopEnd).size(30.dp),
+            )
+        }
+        Column(Modifier.align(Alignment.BottomStart)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }

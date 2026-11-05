@@ -12,6 +12,7 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -116,6 +117,8 @@ fun LibraryScreen(
     deviceItems: List<ShelfItem>,
     /** The big "Library" heading; the desktop's pages carry none. */
     showTitle: Boolean = true,
+    /** Starts a Lyrelo DJ mix; shown at the head of the Playlists row. */
+    onStartDj: (() -> Unit)? = null,
 ) {
     val pinnedPlaylists by AppUi.host.pinnedPlaylists.collectAsStateWithLifecycle()
     val onDevice = stringResource(Res.string.on_device)
@@ -159,6 +162,7 @@ fun LibraryScreen(
                 item(key = "shelf:$PLAYLISTS") {
                     val emptyPlaylists = HomeShelf(PLAYLISTS, emptyList())
                     PlaylistShelf(
+                        onStartDj = onStartDj,
                         shelf = emptyPlaylists,
                         onItemClick = onShelfItemClick,
                         onItemLongPress = onShelfItemLongPress,
@@ -191,6 +195,7 @@ fun LibraryScreen(
                         item(key = "shelf:$PLAYLISTS") {
                             val emptyPlaylists = HomeShelf(PLAYLISTS, emptyList())
                             PlaylistShelf(
+                                onStartDj = onStartDj,
                                 shelf = emptyPlaylists,
                                 onItemClick = onShelfItemClick,
                                 onItemLongPress = onShelfItemLongPress,
@@ -205,6 +210,7 @@ fun LibraryScreen(
                             if (shelf.title == PLAYLISTS) {
                                 val pinnedFirst = shelf.pinnedFirst(pinnedPlaylists)
                                 PlaylistShelf(
+                                    onStartDj = onStartDj,
                                     shelf = pinnedFirst,
                                     onItemClick = onShelfItemClick,
                                     onItemLongPress = onShelfItemLongPress,
@@ -311,6 +317,7 @@ private fun PlaylistShelf(
     onImportSpotifyPlaylist: (() -> Unit)? = null,
     onShowAll: () -> Unit,
     pinnedPlaylists: List<String> = emptyList(),
+    onStartDj: (() -> Unit)? = null,
 ) {
     LibraryGridShelf(
         shelf = shelf,
@@ -320,6 +327,9 @@ private fun PlaylistShelf(
         pinnedPlaylists = pinnedPlaylists,
         leadingCard = {
             Row(horizontalArrangement = Arrangement.spacedBy(LIBRARY_GRID_SPACING)) {
+                if (onStartDj != null) {
+                    DjShelfCard(onClick = onStartDj)
+                }
                 NewShelfCard(
                     icon = BitChordIcons.Plus,
                     label = stringResource(Res.string.new_playlist),
@@ -476,3 +486,35 @@ private fun HomeShelf.sortedForLibrary(sort: LibrarySort): HomeShelf = when (sor
 
 /** The library feed whose cards are the account's own — see [PlaylistShelf]. */
 private const val PLAYLISTS = YtMusicRepository.PLAYLISTS_SHELF
+
+/** The Lyrelo DJ's card at the head of the Playlists row: the orb on Lyrelo's gradient. */
+@Composable
+private fun DjShelfCard(onClick: () -> Unit) {
+    Column(Modifier.width(SHELF_CARD_WIDTH).clickable(onClick = onClick)) {
+        Box(
+            Modifier
+                .size(SHELF_CARD_WIDTH)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        listOf(androidx.compose.ui.graphics.Color(0xFF2A1250), androidx.compose.ui.graphics.Color(0xFF8B2F67)),
+                    ),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            com.music.bitchord.ui.player.LyreloDjOrb(modifier = Modifier.size(SHELF_CARD_WIDTH * 0.5f))
+        }
+        Text(
+            text = stringResource(Res.string.lyrelo_dj),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Text(
+            text = stringResource(Res.string.lyrelo_dj_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}

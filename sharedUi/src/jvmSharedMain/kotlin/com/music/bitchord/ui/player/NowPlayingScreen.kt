@@ -13,6 +13,7 @@ import com.music.bitchord.playback.PlaybackPosition
 import com.music.bitchord.data.settings.ArtworkCorner
 import com.music.bitchord.data.settings.PlayerBackground
 import com.music.bitchord.data.settings.PlayerStyle
+import com.music.bitchord.playback.DjPresence
 import com.music.bitchord.playback.LearnPlayback
 import com.music.bitchord.sharedui.resources.*
 
@@ -1935,15 +1936,17 @@ fun NowPlayingScreen(
         // Not the host's ⋯ menu: that takes its own still, of everything.
         overlayOpen = { overlayOpen.value && !currentMenuOpen() },
         overlays = {
-            if (learnActive && !docking()) {
-                Box(
+            val dj by DjPresence.state.collectAsStateWithLifecycle()
+            if ((learnActive || dj.active) && !docking()) {
+                Column(
                     Modifier
                         .fillMaxSize()
                         .windowInsetsPadding(stableStatusBarInsets())
                         .padding(top = 6.dp),
-                    contentAlignment = Alignment.TopCenter,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    LearnIndicator()
+                    if (dj.active) DjBadge(dj)
+                    if (learnActive) LearnIndicator(Modifier.padding(top = 6.dp))
                 }
             }
             playerOverlays()

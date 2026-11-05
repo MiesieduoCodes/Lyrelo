@@ -55,7 +55,10 @@ object LyreloDj {
         if (song.videoId == lastSongId) return
         val previous = lastSongId
         lastSongId = song.videoId
-        if (!AppSettings.djEnabled.value || !this::appContext.isInitialized) return
+        if (!this::appContext.isInitialized) return
+        // A DJ session does its own talking.
+        if (DjSession.onSongStarted(song)) return
+        if (!AppSettings.djEnabled.value) return
         // A loop or a slowed song is someone studying; don't talk over them.
         if (LearnPlayback.isActive) return
         songsSinceTalk++
@@ -65,19 +68,29 @@ object LyreloDj {
     }
 
     private suspend fun talk(song: Song, previousId: String?) {
+        announce("Next up: ${song.title}, by ${song.artist}.", teachFrom = previousId)
+    }
+
+    /**
+     * Says [english] (translated as the settings ask), after the streak and a
+     * phrase from [teachFrom] when there is one. Shown as captions on the player.
+     */
+    suspend fun announce(english: String, teachFrom: String? = null) {
+        if (!this::appContext.isInitialized) return
         val native = AppSettings.translationLanguage.value.ifBlank { Locale.getDefault().language }
         val learning = AppSettings.learningLanguage.value
         val speech = if (AppSettings.djSpeaksLearningLanguage.value && learning.isNotBlank()) learning else native
 
         val lines = mutableListOf<Pair<String, String>>()
         streakLine()?.let { lines += say(it, speech) }
-        previousId?.let { LearnPlayback.phraseFor(it) }?.let { phrase ->
+        teachFrom?.let { LearnPlayback.phraseFor(it) }?.let { phrase ->
             lines += say("Here's a phrase from that song.", speech)
             lines += phrase.original to phrase.sourceLanguage.ifBlank { learning.ifBlank { speech } }
             lines += say("It means:", speech)
             lines += phrase.translated to native
         }
-        lines += say("Next up: ${song.title}, by ${song.artist}.", speech)
+        lines += say(english, speech)
+        DjPresence.update { it.copy(speaking = true, caption = lines.joinToString(" ") { line -> line.first }) }
         speak(lines)
     }
 
@@ -106,7 +119,10 @@ object LyreloDj {
     }
 
     private suspend fun speak(lines: List<Pair<String, String>>) {
-        val engine = engine() ?: return
+        val engine = engine() ?: run {
+            DjPresence.update { it.copy(speaking = false) }
+            return
+        }
         if (lines.isEmpty()) return
         requestDuck()
         lines.forEachIndexed { index, (text, language) ->
@@ -130,10 +146,10 @@ object LyreloDj {
                         created?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                             override fun onStart(utteranceId: String?) = Unit
                             override fun onDone(utteranceId: String?) {
-                                if (utteranceId == "dj-last") releaseDuck()
+                                if (utteranceId == "dj-last") finished()
                             }
                             @Deprecated("Deprecated in Java")
-                            override fun onError(utteranceId: String?) = releaseDuck()
+                            override fun onError(utteranceId: String?) = finished()
                         })
                         tts = created
                         if (continuation.isActive) continuation.resumeWith(Result.success(created))
@@ -144,6 +160,11 @@ object LyreloDj {
                 }
             }
         }
+    }
+
+    private fun finished() {
+        releaseDuck()
+        DjPresence.update { it.copy(speaking = false) }
     }
 
     private fun requestDuck() {

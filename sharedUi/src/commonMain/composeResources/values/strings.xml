@@ -279,6 +279,12 @@
     <string name="mix_view_bpm">%1$d bpm</string>
     <string name="lyrics_estimated_timing">Estimated timing</string>
     <string name="learning_streak_days">%1$d-day streak</string>
+    <string name="lyrelo_dj">Lyrelo DJ</string>
+    <string name="lyrelo_dj_subtitle">Your mix, with a voice</string>
+    <string name="home_tile_continue">Continue</string>
+    <string name="home_tile_practice">Practice</string>
+    <string name="home_tile_moods">Moods</string>
+    <string name="home_tile_moods_subtitle">Chill, romance, party…</string>
     <string name="learn">Learn</string>
     <string name="learn_close">Close</string>
     <string name="learn_speed">Speed</string>
