@@ -92,6 +92,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val spotifyCanvasAutoHide get() = AppSettings.spotifyCanvasAutoHide
         override val syncedLyrics get() = AppSettings.syncedLyrics
         override val translationLanguage get() = AppSettings.translationLanguage
+        override val learningLanguage get() = AppSettings.learningLanguage
         override val lyricStyle get() = AppSettings.lyricStyle
         override val lyricFontSize get() = AppSettings.lyricFontSize
         override val lyricFont get() = AppSettings.lyricFont

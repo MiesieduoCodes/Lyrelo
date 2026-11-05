@@ -3136,7 +3136,8 @@ internal fun rememberLyricsTranslation(
     // Settings is already exactly what the endpoint wants and narrowing it
     // would throw away the script half of zh-TW. Chinese is the exception on the
     // app path too: bare "zh" comes back Simplified, so the script maps to zh-TW / zh-CN.
-    val translationLanguage = remember(configuredLocale, preferredTranslation) {
+    val learningLanguage by PlayerSettings.learningLanguage.collectAsStateWithLifecycle()
+    val nativeLanguage = remember(configuredLocale, preferredTranslation) {
         preferredTranslation.ifBlank {
             if (LocaleTags.isChineseTag(configuredLocale)) {
                 LocaleTags.translationWireTarget(configuredLocale)
@@ -3145,6 +3146,11 @@ internal fun rememberLyricsTranslation(
             }
         }
     }
+    // A song already in the native language has nothing to translate into, so
+    // it goes the other way, into the language being learned. Set once the
+    // translator has said what language the song is in.
+    var reverseIntoLearning by remember(trackId, lyrics, nativeLanguage, learningLanguage) { mutableStateOf(false) }
+    val translationLanguage = if (reverseIntoLearning) learningLanguage else nativeLanguage
     val translationLanguageName = remember(configuredLocale, translationLanguage) {
         translationLanguageName(translationLanguage, Locale.forLanguageTag(configuredLocale))
     }
@@ -3234,8 +3240,16 @@ internal fun rememberLyricsTranslation(
                     }
                 }
                 is LyricsTranslationResult.SameLanguage -> {
-                    translationState = LyricsTranslationUiState.SameLanguage
-                    if (announce) PlayerPlatform.host.showMessage(alreadyInLanguageMessage)
+                    val learning = learningLanguage
+                    if (!reverseIntoLearning && learning.isNotBlank() &&
+                        !learning.substringBefore('-').equals(translationLanguage.substringBefore('-'), ignoreCase = true)
+                    ) {
+                        // Re-keys the state above, which asks again in the other direction.
+                        reverseIntoLearning = true
+                    } else {
+                        translationState = LyricsTranslationUiState.SameLanguage
+                        if (announce) PlayerPlatform.host.showMessage(alreadyInLanguageMessage)
+                    }
                 }
                 LyricsTranslationResult.Unavailable -> {
                     translationState = LyricsTranslationUiState.Idle
