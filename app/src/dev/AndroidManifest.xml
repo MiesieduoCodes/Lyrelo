@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:label="Lyrelo Dev"
+        android:label="Lyrelo"
         android:usesCleartextTraffic="true"
         tools:replace="android:label,android:usesCleartextTraffic" />
 </manifest>
