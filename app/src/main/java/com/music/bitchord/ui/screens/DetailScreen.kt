@@ -49,6 +49,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -198,7 +199,12 @@ private const val SLEEVE_FRACTION = 0.76f
 /** ...and of its height, so a landscape window still shows the title under it. */
 private const val SLEEVE_MAX_HEIGHT = 0.5f
 
-private val SLEEVE_SHAPE = RoundedCornerShape(12.dp)
+private val SLEEVE_SHAPE = RoundedCornerShape(24.dp)
+private val TRACK_CARD_SHAPE = RoundedCornerShape(20.dp)
+private const val TRACK_CARD_ALPHA = 0.06f
+private val LyreloViolet = Color(0xFF8B5CF6)
+private val LyreloPink = Color(0xFFEC4899)
+private val ARTIST_PHOTO_SIZE = 168.dp
 private val SLEEVE_SHADOW = 18.dp
 
 /** Shuffle and Add to Library either side of the release page's Play pill. */
@@ -544,17 +550,9 @@ fun DetailScreen(
                 // both need to agree on its height without being able to ask each
                 // other — see [artHeight]. A release has no such layer: its sleeve
                 // is an ordinary item at the top of the list.
-                if (isArtist) {
-                    PageBackground(
-                        page = page,
-                        palette = palette,
-                        canvas = canvas,
-                        artHeight = artHeight,
-                        listState = listState,
-                        heroUrl = appleArt?.heroUrl,
-                        modifier = Modifier.matchParentSize(),
-                    )
-                }
+                // Lyrelo's page: a soft violet-to-pink glow over the artwork's
+                // colour, rather than BitChord's edge-to-edge photograph.
+                LyreloGlow(palette = palette, modifier = Modifier.matchParentSize())
 
                 if (reorder != null) {
                     reorder(palette)
@@ -567,7 +565,7 @@ fun DetailScreen(
                 ) {
             item(key = "header") {
                 if (isArtist) {
-                    ArtistHeader(page = page, palette = palette, artHeight = artHeight, appleArt = appleArt, signature = signature)
+                    LyreloArtistHeader(page = page, palette = palette)
                 } else {
                     ReleaseHeader(
                         page = page,
@@ -723,7 +721,13 @@ fun DetailScreen(
                                 flingBehavior = rememberSnapFlingBehavior(lazyListState = topSongsState),
                             ) {
                                 items(top.chunked(SONGS_PER_COLUMN)) { column ->
-                                    Column(Modifier.width(columnWidth)) {
+                                    Column(
+                                        Modifier
+                                            .width(columnWidth)
+                                            .clip(TRACK_CARD_SHAPE)
+                                            .background(palette.onBackground.copy(alpha = TRACK_CARD_ALPHA))
+                                            .padding(vertical = 6.dp),
+                                    ) {
                                         column.forEach { song ->
                                             CompactSongRow(
                                                 song = song,
@@ -757,36 +761,49 @@ fun DetailScreen(
                     ) { position, entry ->
                         val song = entry.value
                         val isCurrent = isCurrentRow(song)
-                        SongRow(
-                            song = if (numbered) {
-                                song
-                            } else {
-                                song.copy(thumbnailUrl = song.thumbnailUrl ?: page.thumbnailUrl)
-                            },
-                            onClick = {
-                                onSongClick(queue, position)
-                            },
-                            onLongPress = { onSongLongPress(song) },
-                            onSwipeToQueue = { onSongSwipe(song) },
-                            rowBackground = Color.Transparent,
-                            // The track's place on the release, not its place in
-                            // what the filter — or a sort — left standing.
-                            trackNumber = originalTrackNumbers[song.videoId].takeIf { numbered },
-                            subtitleColor = palette.onBackgroundVariant,
-                            downloadedTint = downloadedTint,
-                            isCurrent = isCurrent,
-                            isPlaying = isCurrent && isPlaying,
-                            activeTint = palette.accent,
-                            searchPlayingStyle = true,
+                        val cardShape = RoundedCornerShape(
+                            topStart = if (position == 0) 20.dp else 0.dp,
+                            topEnd = if (position == 0) 20.dp else 0.dp,
+                            bottomStart = if (position == matches.lastIndex) 20.dp else 0.dp,
+                            bottomEnd = if (position == matches.lastIndex) 20.dp else 0.dp,
                         )
-                        if (position < matches.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(
-                                    start = if (numbered) NUMBERED_ROW_DIVIDER_INSET else ROW_DIVIDER_INSET,
-                                ),
-                                thickness = 0.5.dp,
-                                color = palette.divider,
+                        Column(
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .clip(cardShape)
+                                .background(palette.onBackground.copy(alpha = TRACK_CARD_ALPHA)),
+                        ) {
+                            SongRow(
+                                song = if (numbered) {
+                                    song
+                                } else {
+                                    song.copy(thumbnailUrl = song.thumbnailUrl ?: page.thumbnailUrl)
+                                },
+                                onClick = {
+                                    onSongClick(queue, position)
+                                },
+                                onLongPress = { onSongLongPress(song) },
+                                onSwipeToQueue = { onSongSwipe(song) },
+                                rowBackground = Color.Transparent,
+                                // The track's place on the release, not its place in
+                                // what the filter — or a sort — left standing.
+                                trackNumber = originalTrackNumbers[song.videoId].takeIf { numbered },
+                                subtitleColor = palette.onBackgroundVariant,
+                                downloadedTint = downloadedTint,
+                                isCurrent = isCurrent,
+                                isPlaying = isCurrent && isPlaying,
+                                activeTint = palette.accent,
+                                searchPlayingStyle = true,
                             )
+                            if (position < matches.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(
+                                        start = if (numbered) NUMBERED_ROW_DIVIDER_INSET else ROW_DIVIDER_INSET,
+                                    ),
+                                    thickness = 0.5.dp,
+                                    color = palette.divider,
+                                )
+                            }
                         }
                     }
                 }
@@ -922,7 +939,7 @@ private fun ReleaseHeader(
         Box(
             Modifier
                 .size(sleeveSize)
-                .shadow(SLEEVE_SHADOW, SLEEVE_SHAPE)
+                .shadow(SLEEVE_SHADOW, SLEEVE_SHAPE, ambientColor = LyreloViolet, spotColor = LyreloPink)
                 .background(palette.elevated)
                 .thumbnailBorder(SLEEVE_SHAPE),
         ) {
@@ -2424,5 +2441,71 @@ private fun List<Song>.playtime(): String? {
         minutes <= 0 -> null
         minutes < 60 -> stringResource(R.string.minutes_short, minutes.toInt())
         else -> stringResource(R.string.hours_minutes_short, (minutes / 60).toInt(), (minutes % 60).toInt())
+    }
+}
+
+/**
+ * The page's backdrop: the artwork's own colour, lit from the top by Lyrelo's
+ * violet and pink. Drawn once, so it costs nothing as the page scrolls.
+ */
+@Composable
+private fun LyreloGlow(palette: ArtworkPalette, modifier: Modifier = Modifier) {
+    Box(
+        modifier.drawBehind {
+            drawRect(
+                Brush.radialGradient(
+                    colors = listOf(LyreloViolet.copy(alpha = 0.42f), Color.Transparent),
+                    center = Offset(size.width * 0.2f, 0f),
+                    radius = size.width * 0.95f,
+                ),
+            )
+            drawRect(
+                Brush.radialGradient(
+                    colors = listOf(LyreloPink.copy(alpha = 0.32f), Color.Transparent),
+                    center = Offset(size.width * 0.9f, size.width * 0.25f),
+                    radius = size.width * 0.8f,
+                ),
+            )
+        },
+    )
+}
+
+/** An artist's header: a round photo in a gradient ring, centred over the name. */
+@Composable
+private fun LyreloArtistHeader(page: DetailPage, palette: ArtworkPalette) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = topBarContentPadding() + 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(ARTIST_PHOTO_SIZE)
+                .shadow(24.dp, CircleShape, ambientColor = LyreloViolet, spotColor = LyreloPink)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(LyreloViolet, LyreloPink)))
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(palette.elevated),
+        ) {
+            AsyncImage(
+                model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),
+                contentDescription = page.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        Text(
+            text = page.title,
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.W800,
+            color = palette.onBackground,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = HEADER_GUTTER),
+        )
     }
 }
