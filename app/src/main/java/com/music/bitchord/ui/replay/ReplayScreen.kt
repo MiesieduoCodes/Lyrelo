@@ -496,7 +496,10 @@ private fun LazyListScope.chart(
 ) {
     if (rows.isEmpty()) return
     item("$key-title") { SectionTitle(title, dark) }
-    items(rows, key = { "$key-${it.key}" }) { row ->
+    // Ranked as well as named: the stats keep albums by YouTube's album id, so
+    // one album reached through two ids is two rows with the same name, and two
+    // equal keys in one list crash it.
+    items(rows, key = { "$key-${it.rank}-${it.key}" }) { row ->
         ReplayChartRow(row, circular, dark) { onClick(row.rank - 1) }
     }
     item("$key-gap") { Spacer(Modifier.height(20.dp)) }
