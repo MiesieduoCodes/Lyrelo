@@ -26,7 +26,16 @@ object DjSession {
         suspend fun queueNext(songs: List<Song>)
         /** Puts [songs] next and moves straight to the first of them. */
         suspend fun playNow(songs: List<Song>)
+        /** The player's volume, 0..1, for fading a song in under the DJ. */
+        fun setVolume(volume: Float)
     }
+
+    /** Under the voice, the song sits this loud; it comes up to full once the DJ is done. */
+    private const val TALK_VOLUME = 0.3f
+    private const val FADE_UNDER_MS = 1_400L
+    private const val FADE_UP_MS = 2_600L
+    private const val FADE_STEP_MS = 40L
+    private var fadeJob: Job? = null
 
     private const val TAG = "DjSession"
     private val MOODS = listOf("chill", "romance", "feel good", "energy", "party", "focus")
@@ -63,6 +72,7 @@ object DjSession {
         songsUntilChange = nextGap()
         DjPresence.onStop = ::stop
         DjPresence.onChangeVibe = ::changeVibe
+        LyreloDj.onSpeechFinished = { fadeTo(1f, FADE_UP_MS) }
         DjPresence.update { DjPresence.State(active = true, caption = "Lyrelo DJ is picking your mix…") }
         job = scope.launch {
             val songs = openingMix()
@@ -77,6 +87,10 @@ object DjSession {
     }
 
     fun stop() {
+        fadeJob?.cancel()
+        fadeJob = null
+        host?.setVolume(1f)
+        LyreloDj.onSpeechFinished = null
         job?.cancel()
         job = null
         host = null
@@ -89,9 +103,13 @@ object DjSession {
         DjPresence.update { DjPresence.State() }
     }
 
-    /** Each sample of playback, once the song changes. Returns false when the session isn't running. */
+    /**
+     * Called by the player the moment a song starts. Returns false when the
+     * session isn't running.
+     */
     fun onSongStarted(song: Song): Boolean {
         val host = host ?: return false
+        if (song.videoId == lastSong?.videoId) return true
         // Anything the listener picked themselves ends the mix.
         if (song.videoId !in known) {
             stop()
@@ -104,7 +122,8 @@ object DjSession {
             // Named once it is playing, so the song said is the song heard.
             val greeting = "Hey ${listenerName.ifBlank { "there" }}, it's your Lyrelo DJ. " +
                 "Let's kick off the vibe with some of your favorites. Here's ${song.title}, by ${song.artist}."
-            scope.launch { LyreloDj.announce(greeting) }
+            fadeInUnderVoice()
+            scope.launch { LyreloDj.announce(greeting, duck = false) }
             return true
         }
         pending?.takeIf { song.videoId in it.songIds }?.let { change ->
@@ -118,7 +137,10 @@ object DjSession {
                 }
                 append("Here's ${song.title}, by ${song.artist}.")
             }
-            scope.launch { LyreloDj.announce(intro, teachFrom = previous?.videoId.takeIf { !change.changeUp }) }
+            fadeInUnderVoice()
+            scope.launch {
+                LyreloDj.announce(intro, teachFrom = previous?.videoId.takeIf { !change.changeUp }, duck = false)
+            }
             return true
         }
         songsUntilChange--
@@ -192,6 +214,32 @@ object DjSession {
             .filter { it.videoId !in known }
             .shuffled()
             .take(MOOD_SONGS)
+    }
+
+    /** The song that was just named starts from silence and rises softly under the voice. */
+    private fun fadeInUnderVoice() {
+        host?.setVolume(0f)
+        fadeTo(TALK_VOLUME, FADE_UNDER_MS, from = 0f)
+    }
+
+    private var volume = 1f
+
+    private fun fadeTo(target: Float, durationMs: Long, from: Float = volume) {
+        val host = host ?: return
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
+            val steps = (durationMs / FADE_STEP_MS).coerceAtLeast(1)
+            for (step in 1..steps) {
+                val t = step.toFloat() / steps
+                // Eased, so the rise sounds like a fader rather than a ramp.
+                val eased = t * t * (3f - 2f * t)
+                volume = from + (target - from) * eased
+                host.setVolume(volume)
+                kotlinx.coroutines.delay(FADE_STEP_MS)
+            }
+            volume = target
+            host.setVolume(target)
+        }
     }
 
     private fun nextGap() = Random.nextInt(5, 11)

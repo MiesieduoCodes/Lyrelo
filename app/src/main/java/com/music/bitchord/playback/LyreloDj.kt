@@ -56,8 +56,8 @@ object LyreloDj {
         val previous = lastSongId
         lastSongId = song.videoId
         if (!this::appContext.isInitialized) return
-        // A DJ session does its own talking.
-        if (DjSession.onSongStarted(song)) return
+        // A DJ session does its own talking, driven by the player itself.
+        if (DjSession.active) return
         if (!AppSettings.djEnabled.value) return
         // A loop or a slowed song is someone studying; don't talk over them.
         if (LearnPlayback.isActive) return
@@ -75,7 +75,11 @@ object LyreloDj {
      * Says [english] (translated as the settings ask), after the streak and a
      * phrase from [teachFrom] when there is one. Shown as captions on the player.
      */
-    suspend fun announce(english: String, teachFrom: String? = null) {
+    /** Called when the DJ stops talking, so a session can bring the music back up. */
+    @Volatile
+    var onSpeechFinished: (() -> Unit)? = null
+
+    suspend fun announce(english: String, teachFrom: String? = null, duck: Boolean = true) {
         if (!this::appContext.isInitialized) return
         val native = AppSettings.translationLanguage.value.ifBlank { Locale.getDefault().language }
         val learning = AppSettings.learningLanguage.value
@@ -91,7 +95,7 @@ object LyreloDj {
         }
         lines += say(english, speech)
         DjPresence.update { it.copy(speaking = true, caption = lines.joinToString(" ") { line -> line.first }) }
-        speak(lines)
+        speak(lines, duck)
     }
 
     private fun streakLine(): String? {
@@ -118,13 +122,14 @@ object LyreloDj {
         return if (translated.isNullOrBlank()) english to ENGLISH else translated to language
     }
 
-    private suspend fun speak(lines: List<Pair<String, String>>) {
+    private suspend fun speak(lines: List<Pair<String, String>>, duck: Boolean = true) {
         val engine = engine() ?: run {
-            DjPresence.update { it.copy(speaking = false) }
+            finished()
             return
         }
         if (lines.isEmpty()) return
-        requestDuck()
+        // A session fades the music itself; ducking on top of that would bury it.
+        if (duck) requestDuck()
         // A touch lower and unhurried reads as a person talking rather than a
         // machine reading; short pauses between lines do the rest.
         engine.setPitch(DJ_PITCH)
@@ -199,6 +204,7 @@ object LyreloDj {
     private fun finished() {
         releaseDuck()
         DjPresence.update { it.copy(speaking = false) }
+        onSpeechFinished?.invoke()
     }
 
     private fun requestDuck() {

@@ -1110,6 +1110,10 @@ private fun BitChordApp(
                 )
             }
 
+            override fun setVolume(volume: Float) {
+                controller?.volume = volume.coerceIn(0f, 1f)
+            }
+
             override suspend fun playNow(songs: List<Song>) {
                 val c = controller ?: return
                 val at = c.currentMediaItemIndex + 1
@@ -1118,6 +1122,18 @@ private fun BitChordApp(
                 c.seekTo(at, 0L)
             }
         }
+    }
+    // The DJ hears about each new song from the player itself, the instant it
+    // starts, so it can fade the song in under its voice from the first note.
+    DisposableEffect(controller) {
+        val c = controller
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                mediaItem?.let { com.music.bitchord.playback.DjSession.onSongStarted(it.toSong()) }
+            }
+        }
+        c?.addListener(listener)
+        onDispose { c?.removeListener(listener) }
     }
     val startDj: () -> Unit = {
         com.music.bitchord.playback.DjSession.start(
