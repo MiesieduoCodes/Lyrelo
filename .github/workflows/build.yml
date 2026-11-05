@@ -1,0 +1,42 @@
+name: Build
+
+# Builds the phone app and keeps the APK as a download. Needs no secrets.
+# BitChord's original workflows are kept in .github/workflows-disabled/.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build dev APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: chmod +x gradlew
+
+      # Skips building the watch app, which the phone APK would otherwise bundle.
+      - name: Build the dev APK
+        run: ./gradlew :app:assembleDevDebug -Pbitchord.bundleWear=false
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyrelo-dev-debug
+          path: app/build/outputs/apk/dev/debug/app-dev-universal-debug.apk
+          if-no-files-found: error
