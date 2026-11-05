@@ -24,6 +24,8 @@ object DjSession {
     interface Host {
         suspend fun play(songs: List<Song>)
         suspend fun queueNext(songs: List<Song>)
+        /** Puts [songs] next and moves straight to the first of them. */
+        suspend fun playNow(songs: List<Song>)
     }
 
     private const val TAG = "DjSession"
@@ -40,10 +42,16 @@ object DjSession {
     private var preparing = false
     private var lastSong: Song? = null
 
-    /** The first song of the next mood, and what to say when it starts. */
+    /**
+     * The next mood's songs, and what to say when one of them starts. Any of
+     * them, not just the first: with shuffle on, the player may start another.
+     */
     private var pending: Pending? = null
 
-    private data class Pending(val firstId: String, val mood: String)
+    private data class Pending(val songIds: Set<String>, val mood: String, val changeUp: Boolean)
+
+    /** Said over the first song, once it actually starts. */
+    private var greetingPending = false
 
     val active: Boolean get() = host != null
 
@@ -54,6 +62,7 @@ object DjSession {
         moodIndex = Random.nextInt(MOODS.size)
         songsUntilChange = nextGap()
         DjPresence.onStop = ::stop
+        DjPresence.onChangeVibe = ::changeVibe
         DjPresence.update { DjPresence.State(active = true, caption = "Lyrelo DJ is picking your mix…") }
         job = scope.launch {
             val songs = openingMix()
@@ -62,11 +71,8 @@ object DjSession {
                 return@launch
             }
             known += songs.map { it.videoId }
+            greetingPending = true
             host.play(songs)
-            val first = songs.first()
-            val greeting = "Hey ${listenerName.ifBlank { "there" }}, it's your Lyrelo DJ. " +
-                "Let's kick off the vibe with some of your favorites. First up, ${first.title}, by ${first.artist}."
-            LyreloDj.announce(greeting)
         }
     }
 
@@ -78,6 +84,8 @@ object DjSession {
         pending = null
         preparing = false
         DjPresence.onStop = null
+        DjPresence.onChangeVibe = null
+        greetingPending = false
         DjPresence.update { DjPresence.State() }
     }
 
@@ -91,14 +99,26 @@ object DjSession {
         }
         val previous = lastSong
         lastSong = song
-        pending?.takeIf { it.firstId == song.videoId }?.let { change ->
+        if (greetingPending) {
+            greetingPending = false
+            // Named once it is playing, so the song said is the song heard.
+            val greeting = "Hey ${listenerName.ifBlank { "there" }}, it's your Lyrelo DJ. " +
+                "Let's kick off the vibe with some of your favorites. Here's ${song.title}, by ${song.artist}."
+            scope.launch { LyreloDj.announce(greeting) }
+            return true
+        }
+        pending?.takeIf { song.videoId in it.songIds }?.let { change ->
             pending = null
             val intro = buildString {
-                if (previous != null) append("That was ${previous.title}, by ${previous.artist}. ")
-                append("Let's switch to something ${change.mood}. ")
-                append("First up, ${song.title}, by ${song.artist}.")
+                if (change.changeUp) {
+                    append("Alright, let's change things up. Something ${change.mood}. ")
+                } else {
+                    if (previous != null) append("That was ${previous.title}, by ${previous.artist}. ")
+                    append("Let's switch to something ${change.mood}. ")
+                }
+                append("Here's ${song.title}, by ${song.artist}.")
             }
-            scope.launch { LyreloDj.announce(intro, teachFrom = previous?.videoId) }
+            scope.launch { LyreloDj.announce(intro, teachFrom = previous?.videoId.takeIf { !change.changeUp }) }
             return true
         }
         songsUntilChange--
@@ -117,12 +137,36 @@ object DjSession {
             val songs = moodSongs(mood)
             if (songs.isEmpty() || this.host !== host) return
             known += songs.map { it.videoId }
-            pending = Pending(songs.first().videoId, mood)
+            pending = Pending(songs.map { it.videoId }.toSet(), mood, changeUp = false)
             host.queueNext(songs)
         } catch (error: Throwable) {
             Log.w(TAG, "couldn't line up the next mood: ${error.message}")
         } finally {
             preparing = false
+        }
+    }
+
+    /** "Change the vibe": a new mood right now, with the DJ saying so. */
+    fun changeVibe() {
+        val host = host ?: return
+        if (preparing) return
+        preparing = true
+        songsUntilChange = nextGap()
+        DjPresence.update { it.copy(caption = "Changing the vibe…") }
+        scope.launch {
+            try {
+                moodIndex = (moodIndex + 1) % MOODS.size
+                val mood = MOODS[moodIndex]
+                val songs = moodSongs(mood)
+                if (songs.isEmpty() || this@DjSession.host !== host) return@launch
+                known += songs.map { it.videoId }
+                pending = Pending(songs.map { it.videoId }.toSet(), mood, changeUp = true)
+                host.playNow(songs)
+            } catch (error: Throwable) {
+                Log.w(TAG, "couldn't change the vibe: ${error.message}")
+            } finally {
+                preparing = false
+            }
         }
     }
 

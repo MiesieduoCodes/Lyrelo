@@ -71,6 +71,18 @@ internal fun DjBadge(state: DjPresence.State, modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Change vibe",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { DjPresence.onChangeVibe?.invoke() }
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            )
             Spacer(Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Rounded.Close,
@@ -83,7 +95,7 @@ internal fun DjBadge(state: DjPresence.State, modifier: Modifier = Modifier) {
             )
         }
         AnimatedVisibility(
-            visible = state.speaking && !state.caption.isNullOrBlank(),
+            visible = !state.caption.isNullOrBlank() && (state.speaking || state.caption.endsWith("…")),
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {

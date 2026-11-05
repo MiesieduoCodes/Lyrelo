@@ -1109,6 +1109,14 @@ private fun BitChordApp(
                     songs.map { it.asQueueEntry(QueueTier.USER_QUEUE).toMediaItem() },
                 )
             }
+
+            override suspend fun playNow(songs: List<Song>) {
+                val c = controller ?: return
+                val at = c.currentMediaItemIndex + 1
+                c.addMediaItems(at, songs.map { it.asQueueEntry(QueueTier.USER_QUEUE).toMediaItem() })
+                // Straight to it by index, so shuffle can't pick a different song.
+                c.seekTo(at, 0L)
+            }
         }
     }
     val startDj: () -> Unit = {

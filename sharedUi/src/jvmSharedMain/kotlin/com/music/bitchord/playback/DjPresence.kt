@@ -17,6 +17,10 @@ object DjPresence {
     @Volatile
     var onStop: (() -> Unit)? = null
 
+    /** Set by the app: the badge's "Change the vibe" button. */
+    @Volatile
+    var onChangeVibe: (() -> Unit)? = null
+
     fun update(change: (State) -> State) {
         _state.value = change(_state.value)
     }

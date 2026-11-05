@@ -68,7 +68,7 @@ object LyreloDj {
     }
 
     private suspend fun talk(song: Song, previousId: String?) {
-        announce("Next up: ${song.title}, by ${song.artist}.", teachFrom = previousId)
+        announce("This is ${song.title}, by ${song.artist}.", teachFrom = previousId)
     }
 
     /**
@@ -86,7 +86,7 @@ object LyreloDj {
         teachFrom?.let { LearnPlayback.phraseFor(it) }?.let { phrase ->
             lines += say("Here's a phrase from that song.", speech)
             lines += phrase.original to phrase.sourceLanguage.ifBlank { learning.ifBlank { speech } }
-            lines += say("It means:", speech)
+            lines += say("It means", speech)
             lines += phrase.translated to native
         }
         lines += say(english, speech)
@@ -125,14 +125,48 @@ object LyreloDj {
         }
         if (lines.isEmpty()) return
         requestDuck()
+        // A touch lower and unhurried reads as a person talking rather than a
+        // machine reading; short pauses between lines do the rest.
+        engine.setPitch(DJ_PITCH)
+        engine.setSpeechRate(DJ_RATE)
         lines.forEachIndexed { index, (text, language) ->
             val locale = Locale.forLanguageTag(language.replace("iw", "he").replace("jw", "jv"))
-            val available = engine.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE
-            engine.language = if (available) locale else Locale.ENGLISH
+            val voice = voiceFor(engine, locale)
+            if (voice != null) {
+                engine.voice = voice
+            } else {
+                val available = engine.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE
+                engine.language = if (available) locale else Locale.ENGLISH
+            }
+            if (index > 0) engine.playSilentUtterance(LINE_PAUSE_MS, TextToSpeech.QUEUE_ADD, "dj-pause-$index")
             val id = if (index == lines.lastIndex) "dj-last" else "dj-$index"
             engine.speak(text, TextToSpeech.QUEUE_ADD, null, id)
         }
     }
+
+    private val chosenVoices = HashMap<String, android.speech.tts.Voice?>()
+
+    /**
+     * The best male voice the phone has for [locale]: a known male voice of the
+     * engine if there is one, then the highest quality, preferring the network
+     * voices, which sound far more natural than the offline ones.
+     */
+    private fun voiceFor(engine: TextToSpeech, locale: Locale): android.speech.tts.Voice? =
+        chosenVoices.getOrPut(locale.toLanguageTag()) {
+            val candidates = runCatching { engine.voices }.getOrNull().orEmpty().filter { voice ->
+                voice.locale.language == locale.language &&
+                    !voice.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)
+            }
+            fun score(voice: android.speech.tts.Voice): Int {
+                val name = voice.name.lowercase(Locale.ROOT)
+                val male = MALE_VOICE_HINTS.any { name.contains(it) } ||
+                    (name.contains("male") && !name.contains("female"))
+                val sameCountry = locale.country.isBlank() || voice.locale.country == locale.country
+                return (if (male) 1_000 else 0) + voice.quality +
+                    (if (voice.isNetworkConnectionRequired) 50 else 0) + (if (sameCountry) 20 else 0)
+            }
+            candidates.maxByOrNull(::score).also { Log.i(TAG, "voice for $locale: ${it?.name}") }
+        }
 
     private suspend fun engine(): TextToSpeech? {
         tts?.takeIf { ready }?.let { return it }
@@ -181,6 +215,20 @@ object LyreloDj {
         focusRequest?.let(audio::abandonAudioFocusRequest)
         focusRequest = null
     }
+
+    private const val DJ_PITCH = 0.92f
+    private const val DJ_RATE = 0.98f
+    private const val LINE_PAUSE_MS = 350L
+
+    /**
+     * Google's text-to-speech names its voices by code rather than by gender.
+     * These are its male ones, across the languages Lyrelo is most used with.
+     */
+    private val MALE_VOICE_HINTS = listOf(
+        "-iol-", "-iom-", "-tpd-", "-gbb-", "-gbd-", "-rjs-", "-aud-", "-end-",
+        "-eed-", "-esd-", "-frd-", "-frb-", "-deg-", "-rud-", "-ruf-", "-itd-", "-itc-",
+        "-jac-", "-jad-", "-koc-", "-kod-", "-ptd-", "-ccd-", "-cce-", "-tre-", "-trf-",
+    )
 
     private val SPEECH: AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ASSISTANT)
