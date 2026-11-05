@@ -3823,7 +3823,10 @@ private fun BitChordApp(
                         // This is intentionally scoped to Listen together: the
                         // round-trip time is meaningful while coordinating a
                         // party, but would be noise in the rest of the app.
-                        if (route == AppRoute.ListenTogether) {
+                        if (
+                            route == AppRoute.ListenTogether &&
+                            (ListenTogether.hasDefaultServer || ListenTogether.customServerUrl.value.isNotBlank())
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 8.dp),

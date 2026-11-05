@@ -412,6 +412,9 @@ object ListenTogether {
                 configured != defaultServer
         }
 
+    /** Whether this build ships with a party server. Lyrelo has none yet. */
+    val hasDefaultServer: Boolean get() = defaultServer.isNotBlank()
+
     /** Whether a party can be reached at all — a built-in or a custom address. */
     val hasServer: Boolean get() = effectiveIdleServerBase().isNotBlank()
 
@@ -795,7 +798,7 @@ object ListenTogether {
 
         val failure = attempt.exceptionOrNull() ?: return@withLock Result.failure(IllegalStateException("Unknown create failure"))
 
-        if (normalizeServerBase(primary) != defaultServer && isEligibleForFallback(failure)) {
+        if (hasDefaultServer && normalizeServerBase(primary) != defaultServer && isEligibleForFallback(failure)) {
             Log.w(TAG, "createParty failed on custom server, falling back to default: ${redact(failure.message)}")
             val fallbackNormalized = resolveHttpBase(defaultServer)
             val fallbackAttempt = runCatching {
@@ -815,7 +818,7 @@ object ListenTogether {
 
     private suspend fun doCreateOnServer(serverBase: String, nickname: String, maxMembers: Int): String {
         val who = identity(nickname) ?: throw PartyException("not_signed_in", "Sign in to listen together.")
-        if (serverBase.isBlank()) throw PartyException("no_server", "Set the party server address first.")
+        if (serverBase.isBlank()) throw PartyException("no_server", "Listen Together isn't available yet.")
         val membership = post(
             "$serverBase/api/parties",
             JoinRequest(
@@ -870,7 +873,7 @@ object ListenTogether {
 
     private suspend fun doJoinOnServer(serverBase: String, code: String, nickname: String): String {
         val who = identity(nickname) ?: throw PartyException("not_signed_in", "Sign in to listen together.")
-        if (serverBase.isBlank()) throw PartyException("no_server", "Set the party server address first.")
+        if (serverBase.isBlank()) throw PartyException("no_server", "Listen Together isn't available yet.")
         val cleaned = code.filter { it.isLetterOrDigit() }.uppercase()
         if (cleaned.length != CODE_LENGTH) {
             throw PartyException("bad_code", "A party code is six letters or digits.")
@@ -1589,7 +1592,7 @@ object ListenTogether {
         return runCatching {
             refuseIfRecentlyKicked(cleaned)
             val base = resolveHttpBase(server ?: effectiveIdleServerBase())
-            if (base.isBlank()) throw PartyException("no_server", "Set the party server address first.")
+            if (base.isBlank()) throw PartyException("no_server", "Listen Together isn't available yet.")
             val response = http.get("$base/api/parties/$cleaned/preview")
             if (!response.status.isSuccess()) {
                 val problem = response.toPartyException()

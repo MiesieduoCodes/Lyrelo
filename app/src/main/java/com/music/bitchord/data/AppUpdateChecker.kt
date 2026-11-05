@@ -42,6 +42,13 @@ object AppUpdateChecker {
 
     private const val CACHE_SUBDIR = "updates"
 
+    /**
+     * Off in Lyrelo until it publishes its own releases: [LATEST_RELEASE_URL] is
+     * still BitChord's, and Lyrelo must not offer to install BitChord's APKs. With
+     * no check, [available] stays null, which hides the update icon and dialog.
+     */
+    private const val UPDATES_ENABLED = false
+
     private const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/kushagrasinghx/BitChord/releases/latest"
 
@@ -66,6 +73,7 @@ object AppUpdateChecker {
     private var downloadCancelled = false
 
     suspend fun check() = withContext(Dispatchers.IO) {
+        if (!UPDATES_ENABLED) return@withContext
         runCatching {
             val request = Request.Builder().url(LATEST_RELEASE_URL).build()
             val body = Http.client.newCall(request).execute().use { response ->

@@ -5,9 +5,11 @@
 
 <img src="Logo.png" alt="BitChord app icon" width="200" />
 
-# BitChord
+# Lyrelo
 
-### Aesthetic YouTube Music Client
+### A music app that helps you learn languages through song lyrics.
+
+Based on BitChord by kushagrasinghx (https://github.com/kushagrasinghx/BitChord), licensed under GPLv3.
 
 <br/>
 

@@ -257,7 +257,7 @@ fun ListenTogetherScreen(
                 pendingServerSwitchInvite = code to targetServer
                 return@LaunchedEffect
             }
-        } else if (customServer.isNotBlank()) {
+        } else if (customServer.isNotBlank() && ListenTogether.hasDefaultServer) {
             pendingServerSwitchInvite = code to ""
             return@LaunchedEffect
         }
@@ -489,6 +489,18 @@ fun ListenTogetherScreen(
             }
         }
 
+        // No built-in server and none typed in: say so, rather than offering two
+        // buttons that are greyed out for no visible reason.
+        if (!state.inParty && !ListenTogether.hasDefaultServer && customServer.isBlank()) {
+            SettingsGroup {
+                SettingsRow(
+                    icon = SfIcons.Cloud,
+                    title = stringResource(R.string.listen_together_not_available_title),
+                    subtitle = stringResource(R.string.listen_together_not_available_message),
+                )
+            }
+        }
+
         if (!state.inParty) {
             PartyLanding(
                 avatarUrl = ListenTogether.myAvatarUrl(),
@@ -549,7 +561,13 @@ fun ListenTogetherScreen(
         // half-typed to explain — the same shape as the ListenBrainz token.
         SettingsGroup(
             header = stringResource(R.string.listen_together_custom_server),
-            footer = stringResource(R.string.listen_together_custom_server_footer),
+            footer = stringResource(
+                if (ListenTogether.hasDefaultServer) {
+                    R.string.listen_together_custom_server_footer
+                } else {
+                    R.string.listen_together_custom_server_footer_no_default
+                },
+            ),
         ) {
             SettingsRow(
                 icon = SfIcons.Dns,
@@ -557,7 +575,13 @@ fun ListenTogetherScreen(
                 subtitleContent = {
                     Text(
                         text = customServer.ifBlank {
-                            stringResource(R.string.listen_together_using_default)
+                            stringResource(
+                                if (ListenTogether.hasDefaultServer) {
+                                    R.string.listen_together_using_default
+                                } else {
+                                    R.string.listen_together_no_server_set
+                                },
+                            )
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -14,11 +14,18 @@ import java.util.UUID
  * reports a stop, so rotating the phone does not read as closing the app.
  */
 object AndroidPresence {
+    /**
+     * Off in Lyrelo: [Presence] reports to BitChord's server, whose public count
+     * Lyrelo installs have no place in. See TODO.md.
+     */
+    private const val ENABLED = false
+
     private const val PREFS = "presence"
     private const val KEY_INSTALL_ID = "install_id"
 
     /** Call once from [Application.onCreate], on the main thread. */
     fun install(app: Application) {
+        if (!ENABLED) return
         val presence = Presence(PresencePlatform.Android, installId(app))
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = presence.setOpen(true)
