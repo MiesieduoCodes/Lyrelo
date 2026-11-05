@@ -27,6 +27,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.core.net.toUri
@@ -74,6 +75,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.guava.future
+import com.music.bitchord.playback.LearnPlayback
 import com.music.bitchord.playback.audio.DspChain
 import com.music.bitchord.playback.cast.CastController
 import com.music.bitchord.playback.cast.CastPlayback
@@ -2307,7 +2309,8 @@ class PlaybackService : MediaLibraryService() {
             // The listener's speed, not the active player's: straight after an
             // Advanced Automix blend the active player is still easing off its
             // beatmatch stretch, and copying that would keep it for good.
-            standbyPlayer.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+            standbyPlayer.playbackParameters =
+                PlaybackParameters(AppSettings.playbackSpeed.value, learnPitchFactor())
             standbyPlayer.volume = 0f
             standbyPlayer.setMediaItems(newItems, currentIndex, alignedStartPos)
             spareLoudness().track(mediaId, nextMediaIdOf(standbyPlayer))
@@ -6701,7 +6704,7 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun applySettings(player: ExoPlayer) {
         player.skipSilenceEnabled = AppSettings.skipSilence.value
-        player.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+        player.playbackParameters = PlaybackParameters(AppSettings.playbackSpeed.value, learnPitchFactor())
         // Restore persisted shuffle and repeat states on startup. Assign both
         // values: Android can destroy and recreate the service while retaining
         // this process, so QueueShuffle's process-wide object may still hold
@@ -7021,6 +7024,58 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /** Runs [body] against both players, in whichever roles they currently hold. */
+    /** The pitch multiplier for the Learn panel's semitones. 1.0 unless it has been moved. */
+    private fun learnPitchFactor(): Float =
+        2.0.pow(LearnPlayback.pitchSemitones.value / 12.0).toFloat()
+
+    /**
+     * Applies the Learn panel's speed, pitch and loop. Speed goes through the
+     * app's existing setting, and ExoPlayer's speed change keeps pitch as it is,
+     * so the two stay independent.
+     */
+    private fun observeLearnControls() {
+        scope.launch {
+            LearnPlayback.speed.collect(AppSettings::setPlaybackSpeed)
+        }
+        scope.launch {
+            LearnPlayback.pitchSemitones.collect {
+                val factor = learnPitchFactor()
+                eachPlayer { player ->
+                    player.playbackParameters = PlaybackParameters(player.playbackParameters.speed, factor)
+                }
+            }
+        }
+        scope.launch {
+            combine(LearnPlayback.speed, LearnPlayback.pitchSemitones, LearnPlayback.loop) { _, _, _ ->
+                LearnPlayback.isActive
+            }.distinctUntilChanged().collectLatest { active ->
+                if (!active) return@collectLatest
+                // Polled because a crossfade changes song by swapping players,
+                // which never reports a media item transition.
+                val song = player?.currentMediaItem?.mediaId
+                while (true) {
+                    val current = player
+                    if (current != null) {
+                        val now = current.currentMediaItem?.mediaId
+                        if (song != null && now != null && now != song) {
+                            LearnPlayback.turnOff()
+                            return@collectLatest
+                        }
+                        val loop = LearnPlayback.loop.value
+                        if (
+                            loop != null &&
+                            crossfade?.isTransitioning() != true &&
+                            current.currentPosition >= loop.endMs
+                        ) {
+                            current.seekTo(loop.startMs)
+                        }
+                    }
+                    delay(LEARN_POLL_MS)
+                }
+            }
+        }
+    }
+
     private inline fun eachPlayer(body: (ExoPlayer) -> Unit) {
         player?.let(body)
         spare?.let(body)
@@ -7097,6 +7152,7 @@ class PlaybackService : MediaLibraryService() {
                 crossfade?.applyPlaybackSpeed(speed) ?: eachPlayer { it.setPlaybackSpeed(speed) }
             }
         }
+        observeLearnControls()
         scope.launch {
             combine(
                 AppSettings.syncedLyrics,
@@ -9662,3 +9718,5 @@ private fun withoutPlatformAlac(selector: MediaCodecSelector) =
  * than on the main thread while a player is built.
  */
 private val ffmpegDecodesAlac by lazy { FfmpegLibrary.supportsFormat(MimeTypes.AUDIO_ALAC) }
+
+private const val LEARN_POLL_MS = 40L

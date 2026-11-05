@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.Constraints
 import com.music.bitchord.ui.graphics.FADE_CURVE_STOPS
 import com.music.bitchord.ui.graphics.smootherStep
 import com.music.bitchord.playback.PlaybackPosition
+import com.music.bitchord.playback.LearnPlayback
 import com.music.bitchord.sharedui.resources.*
 
 import androidx.compose.ui.graphics.ImageBitmap
@@ -43,6 +44,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.alpha
@@ -1042,6 +1044,10 @@ fun NowPlayingScreen(
         }
     }
     val lyricsShareEnabled = lyricsShareAvailable
+    val learnSpeed by LearnPlayback.speed.collectAsStateWithLifecycle()
+    val learnPitch by LearnPlayback.pitchSemitones.collectAsStateWithLifecycle()
+    val learnLoop by LearnPlayback.loop.collectAsStateWithLifecycle()
+    val learnActive = learnSpeed != 1f || learnPitch != 0 || learnLoop != null
     val lyricPicker = rememberLyricsPicker(
         song = song,
         lines = lyrics,
@@ -1049,6 +1055,13 @@ fun NowPlayingScreen(
         artworkUrl = remoteArt,
         haptics = haptics,
         onCard = { lyricsShare = it },
+    )
+    val lyricsLearn = rememberLyricsLearn(
+        trackKey = song.videoId,
+        lines = lyrics.orEmpty(),
+        offsetMs = lyricsOffsetMs,
+        durationMs = durationMs,
+        enabled = !lyricPicker.picking,
     )
     // Nothing here resets [lyricsOpen] on a track change, deliberately. The
     // panel is a place, not a property of the track: someone reading along who
@@ -1883,7 +1896,20 @@ fun NowPlayingScreen(
         live = spotifyCanvasPresentation,
         // Not the host's ⋯ menu: that takes its own still, of everything.
         overlayOpen = { overlayOpen.value && !currentMenuOpen() },
-        overlays = playerOverlays,
+        overlays = {
+            if (learnActive && !docking()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(stableStatusBarInsets())
+                        .padding(top = 6.dp),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    LearnIndicator()
+                }
+            }
+            playerOverlays()
+        },
     ) {
         if (landscape && videoMode) {
             val versionAligning by PlayerSettings.versionAlignmentInProgress.collectAsStateWithLifecycle()
@@ -2201,6 +2227,21 @@ fun NowPlayingScreen(
                                     onClick = lyricsTranslation.toggleTranslation,
                                 )
                             },
+                            learnToggle = {
+                                LearnToggleButton(
+                                    open = lyricsLearn.open,
+                                    enabled = !lyrics.isNullOrEmpty(),
+                                    onClick = lyricsLearn.toggleOpen,
+                                )
+                            },
+                            learnPanel = {
+                                if (lyricsLearn.open && !lyrics.isNullOrEmpty()) {
+                                    LearnPanel(
+                                        learn = lyricsLearn,
+                                        modifier = Modifier.align(Alignment.BottomCenter),
+                                    )
+                                }
+                            },
                         ) { panelModifier ->
                             LyricsTranslationMotion(
                                 trigger = lyricsTranslation.transition,
@@ -2230,6 +2271,7 @@ fun NowPlayingScreen(
                                     picked = lyricPicker.picks,
                                     onPickLine = lyricPicker.pick,
                                     onTogglePick = lyricPicker.toggle,
+                                    learn = lyricsLearn.gestures,
                                     centerFocus = true,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -3714,6 +3756,7 @@ fun NowPlayingScreen(
                                         picked = lyricPicker.picks,
                                         onPickLine = lyricPicker.pick,
                                         onTogglePick = lyricPicker.toggle,
+                                        learn = lyricsLearn.gestures,
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
@@ -3749,11 +3792,17 @@ fun NowPlayingScreen(
                                         onClick = lyricsTranslation.toggleRomanization,
                                     )
                                 }
-                                Box(
+                                Row(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
                                         .graphicsLayer { alpha = translateFade },
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
+                                    LearnToggleButton(
+                                        open = lyricsLearn.open,
+                                        enabled = translateShown && !lyrics.isNullOrEmpty(),
+                                        onClick = lyricsLearn.toggleOpen,
+                                    )
                                     TranslationToggleButton(
                                         state = lyricsTranslation.translationState,
                                         showingTranslation = lyricsTranslation.showingTranslation,
@@ -3763,6 +3812,14 @@ fun NowPlayingScreen(
                                         onClick = lyricsTranslation.toggleTranslation,
                                     )
                                 }
+                            }
+                            if (lyricsPanelVisible && lyricsLearn.open && !lyrics.isNullOrEmpty()) {
+                                LearnPanel(
+                                    learn = lyricsLearn,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                )
                             }
                             // The bar arrives and leaves without a transition of its own:
                             // it is an instruction over the words, and one that has to

@@ -277,4 +277,16 @@
     <string name="mix_view_one_bar">1 Bar</string>
     <string name="mix_view_seconds">%1$d sec</string>
     <string name="mix_view_bpm">%1$d bpm</string>
+    <string name="learn">Learn</string>
+    <string name="learn_close">Close</string>
+    <string name="learn_speed">Speed</string>
+    <string name="learn_pitch">Pitch</string>
+    <string name="learn_reset">Reset</string>
+    <string name="learn_loop">Loop</string>
+    <string name="learn_loop_ab">Loop A–B</string>
+    <string name="learn_loop_off">Loop off</string>
+    <string name="learn_loop_hint">Long-press a line to loop it.</string>
+    <string name="learn_ab_pick_start">Tap the first line.</string>
+    <string name="learn_ab_pick_end">Now tap the last line.</string>
+    <string name="learn_turn_off">Turn off speed, pitch and loop</string>
 </resources>

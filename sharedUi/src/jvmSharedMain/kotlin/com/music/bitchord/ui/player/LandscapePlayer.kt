@@ -510,6 +510,10 @@ internal fun LandscapeLyricsPane(
     pickBar: @Composable () -> Unit = {},
     romanizationToggle: @Composable () -> Unit,
     translationToggle: @Composable () -> Unit,
+    /** Sits beside the translate button. */
+    learnToggle: (@Composable () -> Unit)? = null,
+    /** Drawn over the foot of the lyrics. */
+    learnPanel: @Composable BoxScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     panel: @Composable (Modifier) -> Unit,
 ) {
@@ -534,6 +538,7 @@ internal fun LandscapeLyricsPane(
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
+            learnPanel()
         }
         // While a pick is open the row below gives way to the bar: the two
         // toggles in it would redraw the very lines the pick is indexing, and
@@ -561,6 +566,10 @@ internal fun LandscapeLyricsPane(
                     status = status,
                     onStatusClick = onStatusClick,
                 )
+            }
+            if (hasLyrics && learnToggle != null) {
+                learnToggle()
+                Spacer(Modifier.width(8.dp))
             }
             Box(Modifier.size(34.dp)) { if (hasLyrics) translationToggle() }
         }

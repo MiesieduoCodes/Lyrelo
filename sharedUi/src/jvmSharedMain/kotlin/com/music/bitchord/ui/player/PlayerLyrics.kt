@@ -1789,6 +1789,8 @@ internal fun LyricsPanel(
     onPickLine: (Int) -> Unit = {},
     /** Tap while picking: add or drop that line. */
     onTogglePick: (Int) -> Unit = {},
+    /** Line gestures for the Learn panel, which go first while it is open. */
+    learn: LyricsLearnGestures? = null,
     /**
      * Holds the sung line in the middle of the panel rather than at its top.
      * For the wide layouts — TV, landscape, tablet — where a column of lyrics
@@ -2329,6 +2331,7 @@ internal fun LyricsPanel(
                     .background(
                         when {
                             index in picked -> Color.White.copy(alpha = 0.16f)
+                            learn?.markedLines?.contains(index) == true -> Color.White.copy(alpha = 0.12f)
                             picking -> Color.White.copy(alpha = 0.05f)
                             else -> Color.Transparent
                         },
@@ -2346,11 +2349,13 @@ internal fun LyricsPanel(
                                 enabled = picking || isSynced,
                                 interactionSource = interaction,
                                 indication = LocalIndication.current,
-                                onLongClick = { onPickLine(index) },
+                                onLongClick = {
+                                    if (learn?.onLongPress?.invoke(index) != true) onPickLine(index)
+                                },
                                 onClick = {
                                     if (picking) {
                                         onTogglePick(index)
-                                    } else {
+                                    } else if (learn?.onTap?.invoke(index) != true) {
                                         onSeekToLine(line.timeMs)
                                     }
                                 },
