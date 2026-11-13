@@ -49,8 +49,20 @@ class LocaleStringsTest(private val tag: String) {
             return keys
         }
 
+        /**
+         * Keys knowingly left in English for now (Lyrelo's own screens, before
+         * a translation pass). Listed in a file so the debt is visible and a
+         * brand-new key still fails here unless it is added on purpose.
+         */
+        private val untranslated: Set<String> by lazy {
+            val file = listOf("src/test/resources/untranslated-keys.txt", "app/src/test/resources/untranslated-keys.txt")
+                .map { File(File(".").canonicalFile, it) }
+                .firstOrNull { it.exists() }
+            file?.readLines()?.map { it.trim() }?.filter { it.isNotEmpty() && !it.startsWith("#") }?.toSet().orEmpty()
+        }
+
         private val baseKeys: Set<String> by lazy {
-            translatableKeys(parse(File(resDir, "values/strings.xml")))
+            translatableKeys(parse(File(resDir, "values/strings.xml"))) - untranslated
         }
 
         /**
