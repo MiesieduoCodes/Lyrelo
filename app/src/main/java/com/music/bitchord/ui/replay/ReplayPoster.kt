@@ -728,17 +728,19 @@ internal fun ellipsised(text: String, paint: Paint, width: Float): String {
  * share button.
  */
 internal class Fonts(context: Context) {
-    private val heavy = font(context, R.font.sf_pro_display_heavy) ?: Typeface.DEFAULT_BOLD
-    private val semibold = font(context, R.font.sf_pro_display_semibold) ?: Typeface.DEFAULT_BOLD
-    private val regular = font(context, R.font.sf_pro_display_regular) ?: Typeface.DEFAULT
+    // Variable fonts: one file each, the weight set per paint.
+    private val display = font(context, R.font.lyrelo_geologica) ?: Typeface.DEFAULT_BOLD
+    private val text = font(context, R.font.lyrelo_onest) ?: Typeface.DEFAULT
 
-    fun heading(size: Float, color: Int) = paint(heavy, size, color)
+    fun heading(size: Float, color: Int) = paint(display, size, color).weight(700)
 
     fun body(size: Float, color: Int, bold: Boolean = false) =
-        paint(if (bold) semibold else regular, size, color)
+        paint(text, size, color).weight(if (bold) 600 else 400)
 
     fun label(size: Float, color: Int, tracking: Float = 0.10f) =
-        paint(semibold, size, color).apply { letterSpacing = tracking }
+        paint(text, size, color).weight(600).apply { letterSpacing = tracking }
+
+    private fun Paint.weight(value: Int) = apply { fontVariationSettings = "'wght' $value" }
 
     private fun paint(face: Typeface, size: Float, color: Int) =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {

@@ -1,158 +1,256 @@
 package com.music.bitchord.ui.theme
 
-import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.music.bitchord.R
+import com.music.bitchord.data.settings.AccentChoice
 import com.music.bitchord.data.settings.AppFont
 
-// Apple Music's signature red. No longer the primary accent, but kept for the
-// spots (Replay's rank badge) that want that specific red regardless of theme.
+// Apple Music's signature red, kept for Replay's rank badge, which wants that
+// specific red whatever the theme.
 val AccentRed = Color(0xFFFA2D48)
 
-private val DarkColors = darkColorScheme(
-    primary = Color.White,
-    onPrimary = Color.Black,
-    background = Color.Black,
-    onBackground = Color.White,
-    surface = Color(0xFF0D0D0F),
-    onSurface = Color.White,
-    surfaceVariant = Color(0xFF1C1C1E),
-    onSurfaceVariant = Color(0xFF8E8E93),
-    outline = Color(0xFF2C2C2E),
-)
-
-private val LightColors = lightColorScheme(
-    primary = Color.Black,
-    onPrimary = Color.White,
-    background = Color.White,
-    onBackground = Color.Black,
-    surface = Color(0xFFF7F7F9),
-    onSurface = Color.Black,
-    surfaceVariant = Color(0xFFF2F2F7),
-    onSurfaceVariant = Color(0xFF6E6E73),
-    outline = Color(0xFFE5E5EA),
-)
-
-/**
- * SF Pro Display, the face Apple Music itself is set in, drawn one weight
- * lighter than it is asked for.
- *
- * Measured against Apple Music's own screens, every weight here came out a
- * cut heavier than the same text there: its titles are Semibold where these
- * asked for Bold, its metadata Medium where these asked for Semibold. The
- * shift is made once, in the family, so it reaches the type scale and every
- * weight set in place alike and keeps the steps between them: Heavy draws
- * Bold, Bold draws Semibold, Semibold draws Medium, Medium draws Regular.
- * Regular stays Regular — no lighter cut is bundled, and Apple's body text is
- * Regular too. A FontWeight in this app therefore names the step it sits at in
- * the scale, not the cut it draws.
- *
- * Compose synthesises nothing, so a weight outside these falls back to the
- * nearest one listed.
- */
-val SFProDisplay = FontFamily(
-    Font(R.font.sf_pro_display_regular, FontWeight.W400),
-    Font(R.font.sf_pro_display_regular, FontWeight.W500),
-    Font(R.font.sf_pro_display_medium, FontWeight.W600),
-    Font(R.font.sf_pro_display_semibold, FontWeight.W700),
-    Font(R.font.sf_pro_display_bold, FontWeight.W800),
-)
-
 /*
- * Letter spacing measured off Apple Music's own screens: the spacing the
- * bundled Display cut needs, at the weight it draws, to set a line to the
- * width Apple sets it. Apple sets text under 20pt in SF Pro Text, which is
- * spaced looser than Display, so the small sizes open up — about +0.25 to
- * +0.4 at 12 to 14 — and the spacing closes as the size grows, to just under
- * nothing for semibold titles at 18 to 24. The large titles had nothing to
- * measure against and follow the same trend.
+ * Lyrelo's type: Geologica for display and headings, Onest for everything
+ * people read at length. Both are variable fonts under the SIL Open Font
+ * License (licenses/fonts/), and both cover Latin, Cyrillic and Kazakh, so a
+ * learner's language never falls back to another face mid-word.
+ *
+ * The app's code names weights by the step they sit at in the scale (W800 for
+ * a page title, W700 for a card title), a habit from the font it used before.
+ * Drawn literally, those steps are heavy in these faces, so each family draws
+ * them a little lighter, which keeps the hierarchy and loses the shouting.
  */
-private val BitChordTypography = Typography(
-    displayLarge = TextStyle(fontWeight = FontWeight.W800, fontSize = 34.sp, letterSpacing = (-0.5).sp),
-    headlineLarge = TextStyle(fontWeight = FontWeight.W800, fontSize = 30.sp, letterSpacing = (-0.4).sp),
-    headlineMedium = TextStyle(fontWeight = FontWeight.W700, fontSize = 22.sp, letterSpacing = (-0.25).sp),
-    titleLarge = TextStyle(fontWeight = FontWeight.W700, fontSize = 20.sp, letterSpacing = (-0.2).sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.W600, fontSize = 16.sp, letterSpacing = 0.05.sp),
-    bodyLarge = TextStyle(fontWeight = FontWeight.W400, fontSize = 16.sp, letterSpacing = 0.2.sp),
-    bodyMedium = TextStyle(fontWeight = FontWeight.W400, fontSize = 14.sp, letterSpacing = 0.3.sp),
-    labelMedium = TextStyle(fontWeight = FontWeight.W600, fontSize = 12.sp, letterSpacing = 0.25.sp),
-    labelSmall = TextStyle(fontWeight = FontWeight.W600, fontSize = 11.sp, letterSpacing = 0.3.sp),
-).withFamily(SFProDisplay)
+@OptIn(ExperimentalTextApi::class)
+private fun variableFamily(resId: Int, drawn: (Int) -> Int) = FontFamily(
+    listOf(300, 400, 500, 600, 700, 800, 900).map { step ->
+        Font(
+            resId = resId,
+            weight = FontWeight(step),
+            variationSettings = FontVariation.Settings(FontVariation.weight(drawn(step))),
+        )
+    },
+)
+
+val Geologica = variableFamily(R.font.lyrelo_geologica) { step ->
+    when {
+        step >= 800 -> 700
+        step >= 700 -> 620
+        step >= 600 -> 560
+        else -> step
+    }
+}
+
+val Onest = variableFamily(R.font.lyrelo_onest) { step ->
+    when {
+        step >= 800 -> 700
+        step >= 700 -> 640
+        step >= 600 -> 580
+        else -> step
+    }
+}
+
+private val LyreloTypography = Typography(
+    displayLarge = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W800, fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.6).sp),
+    displayMedium = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W800, fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.5).sp),
+    displaySmall = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W700, fontSize = 26.sp, lineHeight = 32.sp, letterSpacing = (-0.4).sp),
+    headlineLarge = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W800, fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.5).sp),
+    headlineMedium = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W700, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.3).sp),
+    headlineSmall = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W700, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.2).sp),
+    titleLarge = TextStyle(fontFamily = Geologica, fontWeight = FontWeight.W700, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.2).sp),
+    titleMedium = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W600, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = 0.sp),
+    titleSmall = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W600, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.05.sp),
+    bodyLarge = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W400, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.1.sp),
+    bodyMedium = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W400, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.15.sp),
+    bodySmall = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W400, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
+    labelLarge = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W600, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    labelMedium = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W600, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
+    labelSmall = TextStyle(fontFamily = Onest, fontWeight = FontWeight.W600, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.3.sp),
+)
+
+/** The same scale in the phone's own font, for people who read that more easily. */
+private val SystemTypography = Typography(
+    displayLarge = LyreloTypography.displayLarge.copy(fontFamily = FontFamily.Default, letterSpacing = (-0.3).sp),
+    displayMedium = LyreloTypography.displayMedium.copy(fontFamily = FontFamily.Default),
+    displaySmall = LyreloTypography.displaySmall.copy(fontFamily = FontFamily.Default),
+    headlineLarge = LyreloTypography.headlineLarge.copy(fontFamily = FontFamily.Default),
+    headlineMedium = LyreloTypography.headlineMedium.copy(fontFamily = FontFamily.Default),
+    headlineSmall = LyreloTypography.headlineSmall.copy(fontFamily = FontFamily.Default),
+    titleLarge = LyreloTypography.titleLarge.copy(fontFamily = FontFamily.Default),
+    titleMedium = LyreloTypography.titleMedium.copy(fontFamily = FontFamily.Default),
+    titleSmall = LyreloTypography.titleSmall.copy(fontFamily = FontFamily.Default),
+    bodyLarge = LyreloTypography.bodyLarge.copy(fontFamily = FontFamily.Default),
+    bodyMedium = LyreloTypography.bodyMedium.copy(fontFamily = FontFamily.Default),
+    bodySmall = LyreloTypography.bodySmall.copy(fontFamily = FontFamily.Default),
+    labelLarge = LyreloTypography.labelLarge.copy(fontFamily = FontFamily.Default),
+    labelMedium = LyreloTypography.labelMedium.copy(fontFamily = FontFamily.Default),
+    labelSmall = LyreloTypography.labelSmall.copy(fontFamily = FontFamily.Default),
+)
+
+/** An accent's two gradient ends, before they are toned for the page they sit on. */
+private fun AccentChoice.seed(): Pair<Color, Color> = when (this) {
+    AccentChoice.LYRELO, AccentChoice.DYNAMIC, AccentChoice.MATERIAL_YOU -> LyreloBrand.Violet to LyreloBrand.Pink
+    AccentChoice.VIOLET -> Color(0xFF8B5CF6) to Color(0xFF6366F1)
+    AccentChoice.PINK -> Color(0xFFEC4899) to Color(0xFFF43F5E)
+    AccentChoice.OCEAN -> Color(0xFF0EA5E9) to Color(0xFF6366F1)
+    AccentChoice.MINT -> Color(0xFF10B981) to Color(0xFF06B6D4)
+    AccentChoice.SUNSET -> Color(0xFFF97316) to Color(0xFFEC4899)
+    AccentChoice.GOLD -> Color(0xFFEAB308) to Color(0xFFF97316)
+    AccentChoice.CRIMSON -> Color(0xFFE11D48) to Color(0xFFBE123C)
+}
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return maxOf(la, lb) / minOf(la, lb)
+}
 
 /**
- * SF Pro Display as the app first shipped it, before [SFProDisplay] moved every
- * weight a cut lighter: each weight draws its own cut, Heavy included. Kept for
- * [AppFont.LEGACY].
+ * [this] moved toward white on a dark page, or toward black on a light one,
+ * just far enough to read as text on [page] (4.5:1). Any accent, preset or
+ * taken from artwork, comes out legible without a hand-tuned shade for each.
  */
-val SFProDisplayLegacy = FontFamily(
-    Font(R.font.sf_pro_display_regular, FontWeight.W400),
-    Font(R.font.sf_pro_display_medium, FontWeight.W500),
-    Font(R.font.sf_pro_display_semibold, FontWeight.W600),
-    Font(R.font.sf_pro_display_bold, FontWeight.W700),
-    Font(R.font.sf_pro_display_heavy, FontWeight.W800),
+private fun Color.legibleOn(page: Color, ratio: Float = 4.5f): Color {
+    val toward = if (page.luminance() < 0.5f) Color.White else Color.Black
+    var step = 0f
+    var tone = this
+    while (contrast(tone, page) < ratio && step < 1f) {
+        step += 0.05f
+        tone = lerp(this, toward, step)
+    }
+    return tone
+}
+
+private fun lyreloScheme(dark: Boolean, pureBlack: Boolean, accent: Color): ColorScheme = if (dark) {
+    val page = if (pureBlack) Color.Black else LyreloBrand.Night
+    val primary = accent.legibleOn(page)
+    darkColorScheme(
+        primary = primary,
+        onPrimary = if (primary.luminance() > 0.4f) LyreloBrand.Night else Color.White,
+        primaryContainer = accent.copy(alpha = 0.24f).compositeOn(page),
+        onPrimaryContainer = Color.White,
+        secondary = primary,
+        onSecondary = LyreloBrand.Night,
+        tertiary = LyreloBrand.Pink.legibleOn(page),
+        background = page,
+        onBackground = Color.White,
+        surface = if (pureBlack) Color(0xFF0B0812) else Color(0xFF1A1130),
+        onSurface = Color.White,
+        surfaceVariant = if (pureBlack) Color(0xFF17121F) else Color(0xFF251A3D),
+        onSurfaceVariant = Color(0xFFB8AECF),
+        surfaceContainer = if (pureBlack) Color(0xFF0B0812) else Color(0xFF1A1130),
+        surfaceContainerHigh = if (pureBlack) Color(0xFF17121F) else Color(0xFF251A3D),
+        outline = Color(0xFF3A2E56),
+        outlineVariant = Color(0xFF2B2142),
+    )
+} else {
+    val page = Color.White
+    val primary = accent.legibleOn(page)
+    lightColorScheme(
+        primary = primary,
+        onPrimary = Color.White,
+        primaryContainer = accent.copy(alpha = 0.14f).compositeOn(page),
+        onPrimaryContainer = LyreloBrand.Night,
+        secondary = primary,
+        onSecondary = Color.White,
+        tertiary = LyreloBrand.Pink.legibleOn(page),
+        background = page,
+        onBackground = Color(0xFF120B20),
+        surface = LyreloBrand.Mist,
+        onSurface = Color(0xFF120B20),
+        surfaceVariant = LyreloBrand.MistRaised,
+        onSurfaceVariant = Color(0xFF5E5672),
+        surfaceContainer = LyreloBrand.Mist,
+        surfaceContainerHigh = LyreloBrand.MistRaised,
+        outline = Color(0xFFE0DAEE),
+        outlineVariant = Color(0xFFEAE5F4),
+    )
+}
+
+private fun Color.compositeOn(under: Color): Color = Color(
+    red = red * alpha + under.red * (1 - alpha),
+    green = green * alpha + under.green * (1 - alpha),
+    blue = blue * alpha + under.blue * (1 - alpha),
 )
 
-// Heavy, tight typography — the original scale [AppFont.LEGACY] restores.
-private val LegacyTypography = Typography(
-    displayLarge = TextStyle(fontWeight = FontWeight.W800, fontSize = 34.sp, letterSpacing = (-0.8).sp),
-    headlineLarge = TextStyle(fontWeight = FontWeight.W800, fontSize = 30.sp, letterSpacing = (-0.7).sp),
-    headlineMedium = TextStyle(fontWeight = FontWeight.W700, fontSize = 22.sp, letterSpacing = (-0.4).sp),
-    titleLarge = TextStyle(fontWeight = FontWeight.W700, fontSize = 20.sp, letterSpacing = (-0.3).sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.W600, fontSize = 16.sp, letterSpacing = (-0.2).sp),
-    bodyLarge = TextStyle(fontWeight = FontWeight.W400, fontSize = 16.sp),
-    bodyMedium = TextStyle(fontWeight = FontWeight.W400, fontSize = 14.sp),
-    labelMedium = TextStyle(fontWeight = FontWeight.W600, fontSize = 12.sp),
-    labelSmall = TextStyle(fontWeight = FontWeight.W600, fontSize = 11.sp),
-).withFamily(SFProDisplayLegacy)
+/**
+ * Lyrelo's theme: Material's colours and type plus [LyreloColors].
+ *
+ * @param accent which accent the app is drawn in.
+ * @param artworkTint the playing song's colour, for [AccentChoice.DYNAMIC].
+ * @param pureBlack paints the dark theme's page true black (OLED).
+ */
+@Composable
+fun LyreloAppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    font: AppFont = AppFont.DEFAULT,
+    accent: AccentChoice = AccentChoice.LYRELO,
+    pureBlack: Boolean = false,
+    artworkTint: Color? = null,
+    reduceMotion: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    val (seedStart, seedEnd) = accent.seed()
+    val scheme = remember(darkTheme, pureBlack, accent, artworkTint) {
+        when {
+            accent == AccentChoice.MATERIAL_YOU && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                val dynamic = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                if (darkTheme && pureBlack) dynamic.copy(background = Color.Black, surface = Color(0xFF0B0B0B)) else dynamic
+            }
+            accent == AccentChoice.DYNAMIC && artworkTint != null -> lyreloScheme(darkTheme, pureBlack, artworkTint)
+            else -> lyreloScheme(darkTheme, pureBlack, seedStart)
+        }
+    }
+    val lyrelo = remember(scheme, seedEnd, darkTheme) {
+        LyreloColors.of(scheme.primary, seedEnd.legibleOn(scheme.background, ratio = 3f), darkTheme)
+    }
+    MaterialTheme(
+        colorScheme = scheme,
+        typography = when (font) {
+            AppFont.DEFAULT -> LyreloTypography
+            AppFont.LEGACY -> SystemTypography
+        },
+    ) {
+        CompositionLocalProvider(
+            LocalLyreloColors provides lyrelo,
+            LocalReduceMotion provides reduceMotion,
+            content = content,
+        )
+    }
+}
 
-/** Applies [family] to every style in the scale, so nothing is left on Roboto. */
-private fun Typography.withFamily(family: FontFamily) = Typography(
-    displayLarge = displayLarge.copy(fontFamily = family),
-    displayMedium = displayMedium.copy(fontFamily = family),
-    displaySmall = displaySmall.copy(fontFamily = family),
-    headlineLarge = headlineLarge.copy(fontFamily = family),
-    headlineMedium = headlineMedium.copy(fontFamily = family),
-    headlineSmall = headlineSmall.copy(fontFamily = family),
-    titleLarge = titleLarge.copy(fontFamily = family),
-    titleMedium = titleMedium.copy(fontFamily = family),
-    titleSmall = titleSmall.copy(fontFamily = family),
-    bodyLarge = bodyLarge.copy(fontFamily = family),
-    bodyMedium = bodyMedium.copy(fontFamily = family),
-    bodySmall = bodySmall.copy(fontFamily = family),
-    labelLarge = labelLarge.copy(fontFamily = family),
-    labelMedium = labelMedium.copy(fontFamily = family),
-    labelSmall = labelSmall.copy(fontFamily = family),
-)
-
+/** Kept so previews and older call sites keep compiling; draws [LyreloAppTheme]. */
 @Composable
 fun BitChordTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     font: AppFont = AppFont.DEFAULT,
     content: @Composable () -> Unit,
-) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = when (font) {
-            AppFont.DEFAULT -> BitChordTypography
-            AppFont.LEGACY -> LegacyTypography
-        },
-        content = content,
-    )
-}
+) = LyreloAppTheme(darkTheme = darkTheme, font = font, content = content)
 
 /**
  * Draws the status and navigation bar glyphs dark or light.
@@ -176,4 +274,3 @@ fun SystemBarIcons(dark: Boolean) {
         }
     }
 }
-

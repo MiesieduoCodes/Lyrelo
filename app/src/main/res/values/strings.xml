@@ -328,10 +328,10 @@
     <string name="app_icon_monochrome" translatable="false">Monochrome</string>
     <string name="theme">Theme</string>
     <string name="font">Font</string>
-    <string name="font_default">Default</string>
-    <string name="font_legacy">Legacy</string>
-    <string name="font_default_subtitle">SF Pro Display · Apple Music weights</string>
-    <string name="font_legacy_subtitle">SF Pro Display · Original heavy weights</string>
+    <string name="font_default">Lyrelo</string>
+    <string name="font_legacy">System</string>
+    <string name="font_default_subtitle">Geologica and Onest</string>
+    <string name="font_legacy_subtitle">Your phone\'s own font</string>
     <string name="font_footer">Legacy brings back the heavier, tighter type the app used before it was matched to Apple Music.</string>
     <string name="reduce_animation">Reduce animation</string>
     <string name="reduce_animation_subtitle">Freezes the main player\'s gradient instead of drifting</string>
@@ -1369,4 +1369,19 @@
     <string name="no_audio_version">No audio version found for this video</string>
     <string name="no_video_version">No video version found for this song</string>
     <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
+    <string name="accent_color">Accent color</string>
+    <string name="accent_lyrelo">Lyrelo</string>
+    <string name="accent_dynamic">From artwork</string>
+    <string name="accent_material_you">Wallpaper</string>
+    <string name="accent_violet">Violet</string>
+    <string name="accent_pink">Pink</string>
+    <string name="accent_ocean">Ocean</string>
+    <string name="accent_mint">Mint</string>
+    <string name="accent_sunset">Sunset</string>
+    <string name="accent_gold">Gold</string>
+    <string name="accent_crimson">Crimson</string>
+    <string name="pure_black">Pure black</string>
+    <string name="pure_black_subtitle">True black in dark mode. Easier on OLED batteries.</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_based_on_bitchord">Based on BitChord by kushagrasinghx · GPLv3</string>
 </resources>

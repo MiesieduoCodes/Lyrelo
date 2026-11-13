@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -1172,28 +1173,10 @@ internal fun ShelfCard(
 /** The learning streak: a flame and the number of days. */
 @Composable
 private fun StreakPill(days: Int, onClick: (() -> Unit)?) {
-    androidx.compose.foundation.layout.Row(
-        modifier = Modifier
-            .clip(androidx.compose.foundation.shape.CircleShape)
-            .background(Color(0xFFFF7A1A).copy(alpha = 0.16f))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.LocalFireDepartment,
-            contentDescription = null,
-            tint = Color(0xFFFF7A1A),
-            modifier = Modifier.size(20.dp),
-        )
-        androidx.compose.foundation.layout.Spacer(Modifier.width(4.dp))
-        Text(
-            text = stringResource(Res.string.learning_streak_days, days),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-    }
+    com.music.bitchord.ui.theme.LearningPill(
+        label = stringResource(Res.string.learning_streak_days, days),
+        onClick = onClick,
+    )
 }
 
 /** What Lyrelo's four colour blocks on Home do. */
@@ -1208,85 +1191,56 @@ class HomeQuickTiles(
 
 @Composable
 private fun QuickTileGrid(tiles: HomeQuickTiles) {
+    val colors = com.music.bitchord.ui.theme.LyreloTheme.colors
+    val gap = com.music.bitchord.ui.theme.Spacing.md
     Column(
-        Modifier.padding(horizontal = PAGE_GUTTER).padding(bottom = 18.dp),
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+        Modifier.padding(horizontal = PAGE_GUTTER).padding(bottom = com.music.bitchord.ui.theme.Spacing.xl),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap),
     ) {
-        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-            QuickTile(
+        // IntrinsicSize keeps the two tiles in a row the same height when one
+        // grows for a long label or a large font.
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap),
+        ) {
+            com.music.bitchord.ui.theme.LyreloTile(
                 title = stringResource(Res.string.lyrelo_dj),
                 subtitle = stringResource(Res.string.lyrelo_dj_subtitle),
-                colors = listOf(Color(0xFF2A1250), Color(0xFF8B2F67)),
+                colors = colors.tileDj,
                 onClick = tiles.onDj,
-                modifier = Modifier.weight(1f),
-                orb = true,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                badge = {
+                    com.music.bitchord.ui.player.LyreloDjOrb(
+                        modifier = Modifier.align(Alignment.TopEnd).size(30.dp),
+                    )
+                },
             )
-            QuickTile(
+            com.music.bitchord.ui.theme.LyreloTile(
                 title = stringResource(Res.string.home_tile_continue),
                 subtitle = tiles.continueSubtitle,
-                colors = listOf(Color(0xFF0E7490), Color(0xFF155E75)),
+                colors = colors.tileContinue,
                 onClick = tiles.onContinue,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
-        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-            QuickTile(
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap),
+        ) {
+            com.music.bitchord.ui.theme.LyreloTile(
                 title = stringResource(Res.string.home_tile_practice),
                 subtitle = tiles.practiceSubtitle,
-                colors = listOf(Color(0xFFB45309), Color(0xFF9A3412)),
+                colors = colors.tilePractice,
                 onClick = tiles.onPractice,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
             )
-            QuickTile(
+            com.music.bitchord.ui.theme.LyreloTile(
                 title = stringResource(Res.string.home_tile_moods),
                 subtitle = stringResource(Res.string.home_tile_moods_subtitle),
-                colors = listOf(Color(0xFF15803D), Color(0xFF166534)),
+                colors = colors.tileMoods,
                 onClick = tiles.onMoods,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
             )
-        }
-    }
-}
-
-@Composable
-private fun QuickTile(
-    title: String,
-    subtitle: String?,
-    colors: List<Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    orb: Boolean = false,
-) {
-    Box(
-        modifier
-            .height(92.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-            .background(androidx.compose.ui.graphics.Brush.linearGradient(colors))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-    ) {
-        if (orb) {
-            com.music.bitchord.ui.player.LyreloDjOrb(
-                modifier = Modifier.align(Alignment.TopEnd).size(30.dp),
-            )
-        }
-        Column(Modifier.align(Alignment.BottomStart)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }

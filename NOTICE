@@ -1,0 +1,26 @@
+Lyrelo
+Copyright (C) 2026 the Lyrelo contributors
+
+Lyrelo is free software, licensed under the GNU General Public License,
+version 3 (see LICENSE). Its source code is at
+https://github.com/MiesieduoCodes/Lyrelo
+
+Lyrelo is based on BitChord by kushagrasinghx
+(https://github.com/kushagrasinghx/BitChord), also licensed under GPLv3.
+BitChord's own credits for the libraries and services it uses still apply
+and are kept in README.md.
+
+Third-party components added by Lyrelo
+--------------------------------------
+
+Fonts (bundled in the app, app/src/main/res/font/)
+
+  Geologica
+    Copyright 2020 The Geologisk Project Authors
+    https://github.com/monokromskriftforlag/geologisk
+    SIL Open Font License 1.1 — licenses/fonts/Geologica-OFL.txt
+
+  Onest
+    Copyright 2021 The Onest Project Authors
+    https://github.com/googlefonts/onest
+    SIL Open Font License 1.1 — licenses/fonts/Onest-OFL.txt

@@ -297,4 +297,7 @@
     <string name="learn_ab_pick_start">Tap the first line.</string>
     <string name="learn_ab_pick_end">Now tap the last line.</string>
     <string name="learn_turn_off">Turn off speed, pitch and loop</string>
+    <string name="dj_change_vibe">Change vibe</string>
+    <string name="dj_end">End DJ mix</string>
+    <string name="dj_live">DJ is talking</string>
 </resources>

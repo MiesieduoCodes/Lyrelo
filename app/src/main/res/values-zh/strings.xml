@@ -1381,10 +1381,6 @@
     <string name="show_listen_together_button">显示“一起听”按钮</string>
     <string name="show_listen_together_button_subtitle">关闭后，播放器在歌词和播放队列之间只显示音频输出按钮</string>
     <string name="font">字体</string>
-    <string name="font_default">默认</string>
-    <string name="font_legacy">旧版</string>
-    <string name="font_default_subtitle">SF Pro Display · Apple Music 字重</string>
-    <string name="font_legacy_subtitle">SF Pro Display · 原始粗字重</string>
     <string name="font_footer">旧版会恢复应用在匹配 Apple Music 之前使用的更粗、更紧凑的字体。</string>
     <string name="bit_perfect_output">比特完美输出</string>
     <string name="bit_perfect_bypassed_footer">比特完美输出已就绪，因此变灰的设置会被绕过，也不会请求 Dolby Atmos 版本。断开 DAC 或关闭此模式后，它们会恢复工作。</string>

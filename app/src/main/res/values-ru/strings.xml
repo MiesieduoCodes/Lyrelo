@@ -1436,10 +1436,6 @@
     <string name="show_listen_together_button">Показывать кнопку «Слушать вместе»</string>
     <string name="show_listen_together_button_subtitle">Если выключено, плеер показывает между текстом песни и очередью только кнопку аудиовыхода</string>
     <string name="font">Шрифт</string>
-    <string name="font_default">По умолчанию</string>
-    <string name="font_legacy">Прежний</string>
-    <string name="font_default_subtitle">SF Pro Display · Начертания Apple Music</string>
-    <string name="font_legacy_subtitle">SF Pro Display · Исходные жирные начертания</string>
     <string name="font_footer">«Прежний» возвращает более жирный и плотный шрифт, который приложение использовало до того, как его привели в соответствие с Apple Music.</string>
     <string name="bit_perfect_output">Вывод bit-perfect</string>
     <string name="bit_perfect_bypassed_footer">Вывод bit-perfect готов, поэтому затенённые настройки не применяются, а версии Dolby Atmos не запрашиваются. Они снова заработают, когда ЦАП будет отключён или режим выключен.</string>

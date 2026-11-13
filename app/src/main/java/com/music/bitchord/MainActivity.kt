@@ -413,7 +413,23 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            BitChordTheme(darkTheme = darkTheme, font = appFont) {
+            val accentChoice by AppSettings.accentChoice.collectAsStateWithLifecycle()
+            val pureBlack by AppSettings.pureBlack.collectAsStateWithLifecycle()
+            val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+            val artworkUrl by com.music.bitchord.ui.theme.ThemeArtwork.url.collectAsStateWithLifecycle()
+            val artworkTint = if (accentChoice == com.music.bitchord.data.settings.AccentChoice.DYNAMIC) {
+                com.music.bitchord.ui.theme.rememberPlayerTint(artworkUrl)
+            } else {
+                null
+            }
+            com.music.bitchord.ui.theme.LyreloAppTheme(
+                darkTheme = darkTheme,
+                font = appFont,
+                accent = accentChoice,
+                pureBlack = pureBlack,
+                artworkTint = artworkTint,
+                reduceMotion = reduceAnimation,
+            ) {
                 // The glass surfaces sample this layer, and a layer records only
                 // what is drawn into it — which, for BitChord, is a page that
                 // paints no background of its own. Everywhere a page is not
@@ -1063,6 +1079,9 @@ private fun BitChordApp(
     }
     val controller = rememberMediaController()
     val player = rememberPlayerState(controller)
+    LaunchedEffect(player.song?.thumbnailUrl) {
+        com.music.bitchord.ui.theme.ThemeArtwork.url.value = player.song?.thumbnailUrl
+    }
     // A music video's picture follows this controller's clock — see [MusicVideoEngine].
     DisposableEffect(controller) {
         MusicVideoEngine.attach(controller)

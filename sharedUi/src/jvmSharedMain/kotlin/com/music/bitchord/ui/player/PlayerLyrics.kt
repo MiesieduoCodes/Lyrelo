@@ -56,6 +56,7 @@ import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -911,9 +912,17 @@ private fun SweptLyricLine(
     }
 
     val right = alignsRight(line.text, alignEnd, laneLocked)
+    // The Text hugs its words, so TextAlign alone only centres a line once it
+    // wraps: a one-row line sat flush left while its wrapped neighbours were
+    // centred. Placing the box's content by the same rule keeps them together.
+    val centered = style.textAlign == TextAlign.Center
     Box(
         modifier.lyricParticles(layout, translationProgress, glowRoom),
-        contentAlignment = if (right) AbsoluteAlignment.TopRight else AbsoluteAlignment.TopLeft,
+        contentAlignment = when {
+            centered -> Alignment.TopCenter
+            right -> AbsoluteAlignment.TopRight
+            else -> AbsoluteAlignment.TopLeft
+        },
     ) {
         Text(
             text = line.text,
@@ -1483,6 +1492,8 @@ internal fun TranslationToggleButton(
     )
     Box(
         modifier = Modifier
+            // Draws 34dp but takes a 48dp target.
+            .minimumInteractiveComponentSize()
             .size(34.dp)
             .clip(CircleShape)
             .background(LocalPlayerTint.current.copy(alpha = discAlpha))
@@ -1534,6 +1545,7 @@ internal fun RomanizationToggleButton(
     )
     Box(
         modifier = Modifier
+            .minimumInteractiveComponentSize()
             .size(34.dp)
             .clip(CircleShape)
             .background(LocalPlayerTint.current.copy(alpha = discAlpha))

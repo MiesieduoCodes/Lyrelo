@@ -45,6 +45,8 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Brightness4
+import androidx.compose.material.icons.rounded.Contrast
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Cached
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -926,8 +928,31 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }
+            val accentTitle = stringResource(R.string.accent_color)
+            row(accentTitle, "color", "colour", "accent", "material you", "dynamic") {
+                val accent by AppSettings.accentChoice.collectAsStateWithLifecycle()
+                SettingsRow(icon = Icons.Rounded.Palette, title = accentTitle)
+                com.music.bitchord.ui.components.AccentPicker(
+                    selected = accent,
+                    onSelect = AppSettings::setAccentChoice,
+                    modifier = Modifier.padding(start = ROW_INSET - 12.dp, bottom = 8.dp),
+                )
+            }
+            val pureBlackTitle = stringResource(R.string.pure_black)
+            row(pureBlackTitle, "amoled", "oled", "black", "dark") {
+                val pureBlack by AppSettings.pureBlack.collectAsStateWithLifecycle()
+                SettingsRow(
+                    icon = Icons.Rounded.Contrast,
+                    title = pureBlackTitle,
+                    subtitle = stringResource(R.string.pure_black_subtitle),
+                    trailing = {
+                        IosSwitch(checked = pureBlack, onCheckedChange = AppSettings::setPureBlack)
+                    },
+                    onClick = { AppSettings.setPureBlack(!pureBlack) },
+                )
+            }
             val fontTitle = stringResource(R.string.font)
-            row(fontTitle, "typeface", "sf pro", "legacy") {
+            row(fontTitle, "typeface", "geologica", "onest", "system font") {
                 SettingsRow(
                     icon = SfIcons.Font,
                     title = fontTitle,
@@ -1607,6 +1632,42 @@ fun SettingsScreen(
             header = stringResource(R.string.learning),
             footer = learningStatus ?: stringResource(R.string.learning_transfer_footer),
         ) {
+            // The two languages Lyrelo is about, first in its own section. They
+            // also sit under Lyrics, where translation is set up.
+            val learningLanguageRowTitle = stringResource(R.string.learning_language)
+            row(learningLanguageRowTitle, "language", "learn", "target") {
+                SettingsRow(
+                    icon = SfIcons.Translate,
+                    title = learningLanguageRowTitle,
+                    subtitle = if (learningLanguage.isBlank()) {
+                        stringResource(R.string.learning_language_not_set)
+                    } else {
+                        translationLanguageName(
+                            learningLanguage,
+                            AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
+                        )
+                    },
+                    trailing = { Chevron() },
+                    onClick = onLearningLanguage,
+                )
+            }
+            val nativeLanguageRowTitle = stringResource(R.string.translation_language)
+            row(nativeLanguageRowTitle, "language", "native", "mother tongue") {
+                SettingsRow(
+                    icon = SfIcons.Translate,
+                    title = nativeLanguageRowTitle,
+                    subtitle = if (translationLanguage.isBlank()) {
+                        stringResource(R.string.translation_language_subtitle)
+                    } else {
+                        translationLanguageName(
+                            translationLanguage,
+                            AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
+                        )
+                    },
+                    trailing = { Chevron() },
+                    onClick = onTranslationLanguage,
+                )
+            }
             val djTitle = stringResource(R.string.dj)
             row(djTitle, "dj", "voice", "speak", "talk", "learning") {
                 SettingsRow(
@@ -1744,29 +1805,22 @@ fun SettingsScreen(
         if (section == null && searchQuery.isBlank()) {
         Text(
             text = buildAnnotatedString {
-                append("lyrelo $version  ")
+                append("Lyrelo $version  ·  ")
                 val linkStyles = TextLinkStyles(
                     style = SpanStyle(
                         color = MaterialTheme.colorScheme.primary,
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
+                // GPLv3: the source has to be one tap away.
+                withLink(LinkAnnotation.Url("https://github.com/MiesieduoCodes/Lyrelo", linkStyles)) {
+                    append(stringResource(R.string.settings_source_code))
+                }
+                append("\n")
+                // The one place BitChord is named: the credit its licence asks for.
                 withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx/BitChord", linkStyles)) {
-                    append("GitHub")
+                    append(stringResource(R.string.settings_based_on_bitchord))
                 }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx", linkStyles)) {
-                    append("Developer")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://discord.gg/pDdKfrdHY6", linkStyles)) {
-                    append("Discord")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://bitchord.kushagrasingh.in/", linkStyles)) {
-                    append("Website")
-                }
-                append("\n~YouTube Music & Listen Together Backend")
             },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

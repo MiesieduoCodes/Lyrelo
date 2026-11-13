@@ -1361,10 +1361,6 @@
     <string name="show_listen_together_button">Birlikte dinle düğmesini göster</string>
     <string name="show_listen_together_button_subtitle">Kapalıyken oynatıcı, şarkı sözleri ile sıra arasında yalnızca ses çıkışı düğmesini gösterir</string>
     <string name="font">Yazı tipi</string>
-    <string name="font_default">Varsayılan</string>
-    <string name="font_legacy">Eski</string>
-    <string name="font_default_subtitle">SF Pro Display · Apple Music ağırlıkları</string>
-    <string name="font_legacy_subtitle">SF Pro Display · Orijinal kalın ağırlıklar</string>
     <string name="font_footer">Eski, uygulamanın Apple Music\'e uyarlanmadan önce kullandığı daha kalın ve sıkı yazı tipini geri getirir.</string>
     <string name="bit_perfect_output">Bit-perfect çıkış</string>
     <string name="bit_perfect_bypassed_footer">Bit-perfect çıkış hazır, bu nedenle soluk ayarlar atlanır ve Dolby Atmos sürümleri istenmez. DAC çıkarıldığında veya mod kapatıldığında yeniden çalışırlar.</string>

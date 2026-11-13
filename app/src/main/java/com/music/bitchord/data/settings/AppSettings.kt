@@ -127,11 +127,17 @@ enum class ThemeMode(val label: String) {
 }
 
 /**
- * How the app's SF Pro Display is set. [DEFAULT] draws each weight one cut
- * lighter and spaces it to Apple Music's own screens; [LEGACY] is the cut the
- * app shipped with before that, every weight its own and spaced tight.
+ * The app's typeface. [DEFAULT] is Lyrelo's pairing, Geologica and Onest;
+ * [LEGACY] is the phone's own font. (The names are stored, so they stay.)
  */
 enum class AppFont { DEFAULT, LEGACY }
+
+/**
+ * The colour the app is drawn in. [LYRELO] is the brand violet to pink;
+ * [DYNAMIC] follows the playing song's artwork; [MATERIAL_YOU] follows the
+ * wallpaper (Android 12+); the rest are fixed presets.
+ */
+enum class AccentChoice { LYRELO, DYNAMIC, MATERIAL_YOU, VIOLET, PINK, OCEAN, MINT, SUNSET, GOLD, CRIMSON }
 
 /**
  * Which of the equaliser's two tabs is driving the sound.
@@ -410,6 +416,9 @@ object AppSettings {
     val playbackSpeed = MutableStateFlow(1.0f)
     val themeMode = MutableStateFlow(ThemeMode.DARK)
     val appFont = MutableStateFlow(AppFont.DEFAULT)
+    val accentChoice = MutableStateFlow(AccentChoice.LYRELO)
+    /** The dark theme painted true black, for OLED screens. */
+    val pureBlack = MutableStateFlow(false)
 
     /** Keep playing similar music once the queue runs out. */
     val autoplay = MutableStateFlow(true)
@@ -983,6 +992,10 @@ object AppSettings {
         appFont.value = runCatching {
             AppFont.valueOf(prefs.getString(KEY_APP_FONT, null) ?: AppFont.DEFAULT.name)
         }.getOrDefault(AppFont.DEFAULT)
+        accentChoice.value = runCatching {
+            AccentChoice.valueOf(prefs.getString(KEY_ACCENT, null) ?: AccentChoice.LYRELO.name)
+        }.getOrDefault(AccentChoice.LYRELO)
+        pureBlack.value = prefs.getBoolean(KEY_PURE_BLACK, false)
         autoplay.value = prefs.getBoolean(KEY_AUTOPLAY, true)
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
@@ -1371,6 +1384,16 @@ object AppSettings {
     fun setThemeMode(value: ThemeMode) {
         themeMode.value = value
         prefs.edit().putString(KEY_THEME, value.name).apply()
+    }
+
+    fun setAccentChoice(value: AccentChoice) {
+        accentChoice.value = value
+        prefs.edit().putString(KEY_ACCENT, value.name).apply()
+    }
+
+    fun setPureBlack(value: Boolean) {
+        pureBlack.value = value
+        prefs.edit().putBoolean(KEY_PURE_BLACK, value).apply()
     }
 
     fun setAppFont(value: AppFont) {
@@ -2271,6 +2294,8 @@ object AppSettings {
     private const val KEY_SPEED = "playback_speed"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_APP_FONT = "app_font"
+    private const val KEY_ACCENT = "accent_choice"
+    private const val KEY_PURE_BLACK = "pure_black"
     private const val KEY_AUTOPLAY = "autoplay"
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
     private const val KEY_REPEAT_MODE = "repeat_mode"

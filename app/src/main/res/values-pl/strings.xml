@@ -1444,10 +1444,6 @@
     <string name="show_listen_together_button">Pokaż przycisk Słuchajcie razem</string>
     <string name="show_listen_together_button_subtitle">Gdy wyłączone, odtwarzacz pokazuje między tekstem a kolejką tylko przycisk wyjścia audio</string>
     <string name="font">Czcionka</string>
-    <string name="font_default">Domyślna</string>
-    <string name="font_legacy">Klasyczna</string>
-    <string name="font_default_subtitle">SF Pro Display · Grubości z Apple Music</string>
-    <string name="font_legacy_subtitle">SF Pro Display · Oryginalne grube odmiany</string>
     <string name="font_footer">Klasyczna przywraca grubszą i ciaśniejszą czcionkę, której aplikacja używała przed dopasowaniem do Apple Music.</string>
     <string name="bit_perfect_output">Wyjście bit-perfect</string>
     <string name="bit_perfect_bypassed_footer">Wyjście bit-perfect jest gotowe, więc wyszarzone ustawienia są pomijane, a wersje Dolby Atmos nie są pobierane. Zadziałają ponownie po odłączeniu DAC lub wyłączeniu trybu.</string>

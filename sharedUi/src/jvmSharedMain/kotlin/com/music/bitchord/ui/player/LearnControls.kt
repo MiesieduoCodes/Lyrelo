@@ -149,26 +149,14 @@ internal fun rememberLyricsLearn(
 @Composable
 internal fun LearnToggleButton(open: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val tint = LocalPlayerTint.current
-    Box(
-        modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(tint.copy(alpha = if (open) 0.32f else 0.14f))
-            .clickable(
-                enabled = enabled,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.School,
-            contentDescription = stringResource(Res.string.learn),
-            tint = if (enabled) tint else tint.copy(alpha = 0.42f),
-            modifier = Modifier.size(19.dp),
-        )
-    }
+    com.music.bitchord.ui.theme.LyreloIconButton(
+        icon = Icons.Rounded.School,
+        description = stringResource(Res.string.learn),
+        onClick = onClick,
+        enabled = enabled,
+        tint = tint,
+        disc = tint.copy(alpha = if (open) 0.32f else 0.14f),
+    )
 }
 
 @Composable
@@ -180,8 +168,8 @@ internal fun LearnPanel(learn: LyricsLearnUi, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .heightIn(max = 320.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color.Black.copy(alpha = 0.72f))
+            .clip(com.music.bitchord.ui.theme.Radius.large)
+            .background(com.music.bitchord.ui.theme.LyreloTheme.colors.overlayStrong)
             // Taps on the panel's empty space don't fall through to the lyrics.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -199,14 +187,11 @@ internal fun LearnPanel(learn: LyricsLearnUi, modifier: Modifier = Modifier) {
                 color = Color.White,
                 modifier = Modifier.weight(1f),
             )
-            Icon(
-                imageVector = Icons.Rounded.Close,
-                contentDescription = stringResource(Res.string.learn_close),
-                tint = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = learn.close),
+            com.music.bitchord.ui.theme.LyreloIconButton(
+                icon = Icons.Rounded.Close,
+                description = stringResource(Res.string.learn_close),
+                onClick = learn.close,
+                tint = com.music.bitchord.ui.theme.LyreloTheme.colors.onOverlayMuted,
             )
         }
 
@@ -265,9 +250,9 @@ internal fun LearnPanel(learn: LyricsLearnUi, modifier: Modifier = Modifier) {
                 else -> stringResource(Res.string.learn_loop_hint)
             },
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.72f),
+            color = com.music.bitchord.ui.theme.LyreloTheme.colors.onOverlayMuted,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LearnChip(
                 label = stringResource(Res.string.learn_loop_ab),
@@ -291,7 +276,7 @@ private fun LabelledValue(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.72f),
+            color = com.music.bitchord.ui.theme.LyreloTheme.colors.onOverlayMuted,
             modifier = Modifier.weight(1f),
         )
         Text(
@@ -310,22 +295,12 @@ private fun LearnChip(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
-        textAlign = TextAlign.Center,
-        color = when {
-            selected -> Color.Black
-            enabled -> Color.White
-            else -> Color.White.copy(alpha = 0.4f)
-        },
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(if (selected) Color.White else Color.White.copy(alpha = 0.16f))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp),
+    com.music.bitchord.ui.theme.LyreloChip(
+        label = label,
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        surface = com.music.bitchord.ui.theme.ChipSurface.Overlay,
     )
 }
 
@@ -342,28 +317,33 @@ internal fun LearnIndicator(modifier: Modifier = Modifier) {
         if (pitch != 0) add(pitchLabel(pitch))
         if (loop != null) add(loopLabel)
     }.joinToString(" · ")
-    Row(
+    val colors = com.music.bitchord.ui.theme.LyreloTheme.colors
+    Box(
         modifier = modifier
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.62f))
-            .clickable(onClick = LearnPlayback::turnOff)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .heightIn(min = com.music.bitchord.ui.theme.Touch.min)
+            .clickable(onClick = LearnPlayback::turnOff),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-        )
-        Spacer(Modifier.width(6.dp))
-        Icon(
-            imageVector = Icons.Rounded.Close,
-            contentDescription = stringResource(Res.string.learn_turn_off),
-            tint = Color.White,
-            modifier = Modifier.size(15.dp),
-        )
+        Row(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(colors.overlay)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.onOverlay,
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                imageVector = Icons.Rounded.Close,
+                contentDescription = stringResource(Res.string.learn_turn_off),
+                tint = colors.onOverlay,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 

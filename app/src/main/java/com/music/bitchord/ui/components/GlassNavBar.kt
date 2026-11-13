@@ -501,7 +501,7 @@ private val INLINE_LIFT = 7.dp
 private val ACCESSORY_TITLE_SIZE = 13.sp
 
 /**
- * W700, which in this app's family draws the Semibold cut (see SFProDisplay):
+ * W700, which the app font draws a little lighter (see Onest in Theme.kt):
  * Apple's accessory sets its title in Semibold, and the scale's W600 — the
  * Medium cut — read thin at 13sp.
  */

@@ -1409,10 +1409,6 @@
     <string name="show_listen_together_button">Mostrar botão Ouvir junto</string>
     <string name="show_listen_together_button_subtitle">Desativado, o player mostra apenas o botão de saída de áudio entre a letra e a fila</string>
     <string name="font">Fonte</string>
-    <string name="font_default">Padrão</string>
-    <string name="font_legacy">Clássica</string>
-    <string name="font_default_subtitle">SF Pro Display · Pesos do Apple Music</string>
-    <string name="font_legacy_subtitle">SF Pro Display · Pesos grossos originais</string>
     <string name="font_footer">Clássica traz de volta a letra mais grossa e compacta que o app usava antes de ser alinhado ao Apple Music.</string>
     <string name="bit_perfect_output">Saída bit-perfect</string>
     <string name="bit_perfect_bypassed_footer">A saída bit-perfect está pronta, então os ajustes esmaecidos são ignorados e as versões Dolby Atmos não são solicitadas. Eles voltam a funcionar quando o DAC é desconectado ou o modo é desativado.</string>

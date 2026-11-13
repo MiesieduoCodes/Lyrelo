@@ -1938,11 +1938,23 @@ fun NowPlayingScreen(
         overlays = {
             val dj by DjPresence.state.collectAsStateWithLifecycle()
             if ((learnActive || dj.active) && !docking()) {
+                // Under the "Playing from" header on the player, so the two never
+                // overlap; at the foot of the lyrics, above the Translate and
+                // Learn buttons, where the lyrics header would otherwise sit.
                 Column(
                     Modifier
                         .fillMaxSize()
                         .windowInsetsPadding(stableStatusBarInsets())
-                        .padding(top = 6.dp),
+                        .then(
+                            if (lyricsOpen) {
+                                Modifier
+                                    .navigationBarsPadding()
+                                    .padding(bottom = 64.dp)
+                            } else {
+                                Modifier.padding(top = HEADER_HEIGHT)
+                            },
+                        ),
+                    verticalArrangement = if (lyricsOpen) Arrangement.Bottom else Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (dj.active) DjBadge(dj)
@@ -2145,7 +2157,7 @@ fun NowPlayingScreen(
                                 song = song,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                                    .padding(horizontal = 28.dp, vertical = 10.dp) // clear of the sleeve's rounded corners
                                     // Faded with the player rather than flown with
                                     // the sleeve: the cover in the bar has none.
                                     .graphicsLayer { alpha = if (panelOpen) 0f else dockFade() },
@@ -3499,7 +3511,7 @@ fun NowPlayingScreen(
                                     song = song,
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                                        .padding(horizontal = 28.dp, vertical = 10.dp) // clear of the sleeve's rounded corners
                                         .graphicsLayer {
                                             alpha = (1f - p() * 2f) * spotifyChromeAlpha
                                         },
@@ -3845,11 +3857,11 @@ fun NowPlayingScreen(
                             // here it costs the panel nothing and still reads as sitting
                             // on top of the half player, because that is where it is.
                             //
-                            // Arrives and leaves on the controls' own fade: the panel is
-                            // for reading, and a control parked over the words when
-                            // nobody asked for the controls is one more thing between
-                            // the reader and them.
-                            val translateShown = lyricsPanelVisible && (lyricsControlsOpen || lyricsFirstStyle)
+                            // Always there while the lyrics are open: Translate and
+                            // Learn are what Lyrelo is for, and hiding them until an
+                            // empty spot is tapped (a tap on a line seeks instead)
+                            // left people unable to find them.
+                            val translateShown = lyricsPanelVisible
                             val translateFade by animateFloatAsState(
                                 targetValue = if (translateShown) 1f else 0f,
                                 animationSpec = tween(if (translateShown) 220 else 160),
