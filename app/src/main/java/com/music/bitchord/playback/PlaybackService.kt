@@ -221,6 +221,10 @@ const val ACTION_TOGGLE_FAVORITE = "com.music.bitchord.action.TOGGLE_FAVORITE"
 /** Session command used by the media notification's and the 4×1 widget's Shuffle button. */
 const val ACTION_TOGGLE_SHUFFLE = "com.music.bitchord.action.TOGGLE_SHUFFLE"
 
+/** Lyrelo DJ: the notification's Change vibe and End DJ mix buttons. */
+const val ACTION_DJ_CHANGE_VIBE = "com.music.bitchord.action.DJ_CHANGE_VIBE"
+const val ACTION_DJ_END = "com.music.bitchord.action.DJ_END"
+
 /** Session actions exposed to Android Auto for the track that is playing. */
 const val ACTION_START_STATION = "com.music.bitchord.action.START_STATION"
 const val ACTION_REVERT_TO_ORIGINAL = "com.music.bitchord.action.REVERT_TO_ORIGINAL"
@@ -785,6 +789,8 @@ class PlaybackService : MediaLibraryService() {
     private val favoriteCommand = SessionCommand(ACTION_TOGGLE_FAVORITE, Bundle.EMPTY)
     private val autoplayCommand = SessionCommand(ACTION_TOGGLE_AUTOPLAY, Bundle.EMPTY)
     private val shuffleCommand = SessionCommand(ACTION_TOGGLE_SHUFFLE, Bundle.EMPTY)
+    private val djChangeVibeCommand = SessionCommand(ACTION_DJ_CHANGE_VIBE, Bundle.EMPTY)
+    private val djEndCommand = SessionCommand(ACTION_DJ_END, Bundle.EMPTY)
     private val startStationCommand = SessionCommand(ACTION_START_STATION, Bundle.EMPTY)
     private val revertToOriginalCommand = SessionCommand(ACTION_REVERT_TO_ORIGINAL, Bundle.EMPTY)
     private val swapToVersionCommand = SessionCommand(ACTION_SWAP_TO_VERSION, Bundle.EMPTY)
@@ -1283,6 +1289,16 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // The DJ turns the music down under its voice through this player, and
+        // the notification swaps in its buttons while a mix runs.
+        DjDucker.attach { level -> player?.volume = level }
+        scope.launch {
+            DjPresence.state
+                .map { it.active }
+                .distinctUntilChanged()
+                .collect { refreshCustomLayouts() }
+        }
 
         if (com.music.bitchord.data.innertube.Innertube.cookie == null) {
             com.music.bitchord.data.innertube.Innertube.cookie = com.music.bitchord.auth.AuthStore(this).cookie
@@ -2049,6 +2065,20 @@ class PlaybackService : MediaLibraryService() {
 
     /** Favorite and Shuffle: the only actions shown on the phone notification. */
     private fun notificationButtons(): List<CommandButton> {
+        // While a DJ mix runs, its two controls take the slots: they're what
+        // you reach for from the lock screen in the middle of a mix.
+        if (DjPresence.state.value.active) {
+            return listOf(
+                CommandButton.Builder(CommandButton.ICON_RADIO)
+                    .setSessionCommand(djChangeVibeCommand)
+                    .setDisplayName(getString(R.string.dj_change_vibe_action))
+                    .build(),
+                CommandButton.Builder(CommandButton.ICON_STOP)
+                    .setSessionCommand(djEndCommand)
+                    .setDisplayName(getString(R.string.dj_end_action))
+                    .build(),
+            )
+        }
         val liked = isLiked(player?.currentMediaItem)
         // The icon constant tells controllers like Android Auto what the button
         // means; the custom drawable swaps Material's sharp star for the
@@ -7680,6 +7710,9 @@ class PlaybackService : MediaLibraryService() {
 
 
     override fun onDestroy() {
+        // The mix can't outlive the player it plays through.
+        DjSession.stop()
+        DjDucker.detach()
         WearBridge.attachStreams(null)
         WearBridge.releaseSpeaker()
         // Let go of the receiver's player but leave its session alone: a
@@ -8490,6 +8523,8 @@ class PlaybackService : MediaLibraryService() {
                 .add(clearBoundedContextCommand)
                 .add(autoplayCommand)
                 .add(shuffleCommand)
+                .add(djChangeVibeCommand)
+                .add(djEndCommand)
                 .add(startStationCommand)
                 .add(revertToOriginalCommand)
                 .add(swapToVersionCommand)
@@ -8527,6 +8562,8 @@ class PlaybackService : MediaLibraryService() {
                 ACTION_CLEAR_BOUNDED_CONTEXT -> clearBoundedContext()
                 ACTION_TOGGLE_AUTOPLAY -> toggleAutoplayFromNotification()
                 ACTION_TOGGLE_SHUFFLE -> toggleShuffleFromSession()
+                ACTION_DJ_CHANGE_VIBE -> DjSession.changeVibe()
+                ACTION_DJ_END -> DjSession.stop()
                 ACTION_START_STATION -> startStationFromSession()
                 ACTION_REVERT_TO_ORIGINAL -> revertCurrentToOriginal()
                 ACTION_SWAP_TO_VERSION -> swapCurrentToVersion(args)

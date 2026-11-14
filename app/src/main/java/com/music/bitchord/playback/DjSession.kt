@@ -1,55 +1,65 @@
 package com.music.bitchord.playback
 
+import android.content.Context
 import android.util.Log
+import com.music.bitchord.R
+import com.music.bitchord.data.model.SearchFilter
+import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.stats.ListeningStats
 import com.music.bitchord.data.stats.ReplayPeriod
+import com.music.bitchord.playback.dj.DjTalkSchedule
+import com.music.bitchord.playback.dj.DjVibeCycle
 import java.util.Locale
-import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * A Lyrelo DJ session, started from Home or Library: a mix that opens on what
- * the listener plays most, then every five to ten songs changes mood using
- * YouTube Music's mood playlists, with the DJ talking over each change.
+ * A Lyrelo DJ mix: it starts from a vibe the listener picks, then every five
+ * to ten songs moves to a new mood from YouTube Music's mood playlists, with
+ * the DJ talking over each change and, every few songs between, naming what's
+ * next and teaching a phrase.
+ *
+ * It reaches the player through a [Host] it opens itself ([DjPlayerLink]), not
+ * through the activity, so it carries on with the screen off and ends when
+ * playback does. Every way a mix can fail to start ends in a caption and a
+ * clean stop, never in a badge that says "picking" with nothing behind it.
  */
 object DjSession {
-    /** How the session reaches the player, which lives with the activity. */
+    /** How the session reaches the player. */
     interface Host {
         suspend fun play(songs: List<Song>)
         suspend fun queueNext(songs: List<Song>)
         /** Puts [songs] next and moves straight to the first of them. */
         suspend fun playNow(songs: List<Song>)
-        /** The player's volume, 0..1, for fading a song in under the DJ. */
-        fun setVolume(volume: Float)
+        fun release()
     }
 
-    /** Under the voice, the song sits this loud; it comes up to full once the DJ is done. */
-    private const val TALK_VOLUME = 0.3f
-    private const val FADE_UNDER_MS = 1_400L
-    private const val FADE_UP_MS = 2_600L
-    private const val FADE_STEP_MS = 40L
-    private var fadeJob: Job? = null
-
     private const val TAG = "DjSession"
-    private val MOODS = listOf("chill", "romance", "feel good", "energy", "party", "focus")
     private const val MOOD_SONGS = 8
+    /** Longest a mix may spend getting its first songs before it gives up and says so. */
+    private const val START_TIMEOUT_MS = 15_000L
+    /** How long a status caption stays up before the badge goes. */
+    private const val NOTICE_MS = 6_000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var appContext: Context? = null
     private var host: Host? = null
     private var job: Job? = null
     private var listenerName = ""
     private val known = mutableSetOf<String>()
     private var songsUntilChange = 0
-    private var moodIndex = 0
     private var preparing = false
     private var lastSong: Song? = null
+    private var vibes = DjVibeCycle(DjVibe.MOODS.map { it.name })
+    private val talk = DjTalkSchedule()
 
     /**
      * The next mood's songs, and what to say when one of them starts. Any of
@@ -57,50 +67,83 @@ object DjSession {
      */
     private var pending: Pending? = null
 
-    private data class Pending(val songIds: Set<String>, val mood: String, val changeUp: Boolean)
+    private data class Pending(val songIds: Set<String>, val mood: DjVibe, val changeUp: Boolean)
 
     /** Said over the first song, once it actually starts. */
     private var greetingPending = false
 
-    val active: Boolean get() = host != null
+    val active: Boolean get() = job != null || host != null
 
-    fun start(host: Host, name: String) {
-        stop()
-        this.host = host
+    /** Starts a mix from [vibe]. Music starts as soon as the first songs are fetched. */
+    fun start(context: Context, name: String, vibe: DjVibe) {
+        stop(announce = false)
+        val app = context.applicationContext
+        appContext = app
         listenerName = name
-        moodIndex = Random.nextInt(MOODS.size)
         songsUntilChange = nextGap()
-        DjPresence.onStop = ::stop
+        vibes = DjVibeCycle(DjVibe.MOODS.map { it.name })
+        vibes.start(vibe.takeIf { it.moodKey != null }?.name)
+        talk.setChattiness(AppSettings.djChattiness.value)
+        talk.reset(talkOnNext = false)
+        LyreloDj.newSession()
+        DjPresence.onStop = { stop() }
         DjPresence.onChangeVibe = ::changeVibe
-        LyreloDj.onSpeechFinished = { fadeTo(1f, FADE_UP_MS) }
-        DjPresence.update { DjPresence.State(active = true, caption = "Lyrelo DJ is picking your mix…") }
+        notice(app.getString(R.string.dj_caption_picking))
         job = scope.launch {
-            val songs = openingMix()
+            val link = runCatching { DjPlayerLink.connect(app) }.getOrElse {
+                Log.w(TAG, "couldn't reach the player: ${it.message}")
+                fail(R.string.dj_caption_offline)
+                return@launch
+            }
+            host = link
+            if (vibe == DjVibe.LEARN && AppSettings.learningLanguage.value.isBlank()) {
+                fail(R.string.dj_caption_no_learning_language)
+                return@launch
+            }
+            val songs = withTimeoutOrNull(START_TIMEOUT_MS) {
+                runCatching { openingMix(vibe) }.getOrDefault(emptyList())
+            }.orEmpty()
             if (songs.isEmpty()) {
-                DjPresence.update { it.copy(caption = "Couldn't reach YouTube Music. Try again in a moment.") }
+                fail(R.string.dj_caption_offline)
                 return@launch
             }
             known += songs.map { it.videoId }
             greetingPending = true
-            host.play(songs)
+            link.play(songs)
         }
     }
 
-    fun stop() {
-        fadeJob?.cancel()
-        fadeJob = null
-        host?.setVolume(1f)
-        LyreloDj.onSpeechFinished = null
+    /**
+     * Ends the mix. With [announce], the DJ says a short goodbye and the
+     * caption hands the queue back; either way the music is left at full volume.
+     */
+    fun stop(announce: Boolean = false) {
+        val wasActive = active
         job?.cancel()
         job = null
+        host?.release()
         host = null
         known.clear()
         pending = null
         preparing = false
+        greetingPending = false
+        lastSong = null
         DjPresence.onStop = null
         DjPresence.onChangeVibe = null
-        greetingPending = false
-        DjPresence.update { DjPresence.State() }
+        DjDucker.reset()
+        // Lets go of the voice engines: a loaded neural voice holds a few hundred MB.
+        LyreloDj.release()
+        if (announce && wasActive) {
+            val context = appContext
+            val caption = context?.getString(R.string.dj_caption_handed_back)
+            DjPresence.update { DjPresence.State(active = true, caption = caption, notice = true) }
+            scope.launch {
+                delay(NOTICE_MS)
+                if (!active) DjPresence.update { DjPresence.State() }
+            }
+        } else {
+            DjPresence.update { DjPresence.State() }
+        }
     }
 
     /**
@@ -110,36 +153,33 @@ object DjSession {
     fun onSongStarted(song: Song): Boolean {
         val host = host ?: return false
         if (song.videoId == lastSong?.videoId) return true
-        // Anything the listener picked themselves ends the mix.
+        // Still fetching the mix: whatever the old queue does meanwhile isn't
+        // the listener walking away from it.
+        if (known.isEmpty()) return true
+        // Something the listener picked themselves: the DJ steps aside.
         if (song.videoId !in known) {
-            stop()
+            stop(announce = true)
             return false
         }
         val previous = lastSong
         lastSong = song
+        // The first song is playing: the "picking" status has done its job.
+        DjPresence.update { if (it.notice) it.copy(caption = null, notice = false) else it }
         if (greetingPending) {
             greetingPending = false
-            // Named once it is playing, so the song said is the song heard.
-            val greeting = "Hey ${listenerName.ifBlank { "there" }}, it's your Lyrelo DJ. " +
-                "Let's kick off the vibe with some of your favorites. Here's ${song.title}, by ${song.artist}."
-            fadeInUnderVoice()
-            scope.launch { LyreloDj.announce(greeting, duck = false) }
+            DjDucker.riseUnderVoice()
+            scope.launch { LyreloDj.greet(listenerName, song) }
             return true
         }
         pending?.takeIf { song.videoId in it.songIds }?.let { change ->
             pending = null
-            val intro = buildString {
-                if (change.changeUp) {
-                    append("Alright, let's change things up. Something ${change.mood}. ")
-                } else {
-                    if (previous != null) append("That was ${previous.title}, by ${previous.artist}. ")
-                    append("Let's switch to something ${change.mood}. ")
-                }
-                append("Here's ${song.title}, by ${song.artist}.")
-            }
-            fadeInUnderVoice()
+            DjDucker.riseUnderVoice()
             scope.launch {
-                LyreloDj.announce(intro, teachFrom = previous?.videoId.takeIf { !change.changeUp }, duck = false)
+                if (change.changeUp) {
+                    LyreloDj.changeUp(change.mood, song)
+                } else {
+                    LyreloDj.vibeChange(previous, change.mood, song)
+                }
             }
             return true
         }
@@ -148,14 +188,15 @@ object DjSession {
             preparing = true
             songsUntilChange = nextGap()
             scope.launch { prepareNextMood(host) }
+        } else if (talk.onSongStarted()) {
+            scope.launch { LyreloDj.between(previous, song) }
         }
         return true
     }
 
     private suspend fun prepareNextMood(host: Host) {
         try {
-            moodIndex = (moodIndex + 1) % MOODS.size
-            val mood = MOODS[moodIndex]
+            val mood = DjVibe.valueOf(vibes.next())
             val songs = moodSongs(mood)
             if (songs.isEmpty() || this.host !== host) return
             known += songs.map { it.videoId }
@@ -168,19 +209,24 @@ object DjSession {
         }
     }
 
-    /** "Change the vibe": a new mood right now, with the DJ saying so. */
+    /** "Change vibe": a new mood right now, with the DJ saying so. */
     fun changeVibe() {
         val host = host ?: return
         if (preparing) return
         preparing = true
         songsUntilChange = nextGap()
-        DjPresence.update { it.copy(caption = "Changing the vibe…") }
+        appContext?.let { notice(it.getString(R.string.dj_caption_changing)) }
         scope.launch {
             try {
-                moodIndex = (moodIndex + 1) % MOODS.size
-                val mood = MOODS[moodIndex]
+                val mood = DjVibe.valueOf(vibes.next())
                 val songs = moodSongs(mood)
-                if (songs.isEmpty() || this@DjSession.host !== host) return@launch
+                if (this@DjSession.host !== host) return@launch
+                if (songs.isEmpty()) {
+                    appContext?.let { notice(it.getString(R.string.dj_caption_offline)) }
+                    delay(NOTICE_MS)
+                    DjPresence.update { if (it.notice) it.copy(caption = null, notice = false) else it }
+                    return@launch
+                }
                 known += songs.map { it.videoId }
                 pending = Pending(songs.map { it.videoId }.toSet(), mood, changeUp = true)
                 host.playNow(songs)
@@ -192,7 +238,29 @@ object DjSession {
         }
     }
 
-    private suspend fun openingMix(): List<Song> {
+    private fun notice(text: String) {
+        DjPresence.update { it.copy(active = true, caption = text, notice = true) }
+    }
+
+    private suspend fun fail(message: Int) {
+        val context = appContext ?: return
+        host?.release()
+        host = null
+        DjPresence.update { DjPresence.State(active = true, caption = context.getString(message), notice = true) }
+        delay(NOTICE_MS)
+        job = null
+        DjPresence.onStop = null
+        DjPresence.onChangeVibe = null
+        DjPresence.update { DjPresence.State() }
+    }
+
+    private suspend fun openingMix(vibe: DjVibe): List<Song> = when {
+        vibe == DjVibe.LEARN -> learnSongs()
+        vibe.moodKey != null -> moodSongs(vibe).ifEmpty { favoritesMix() }
+        else -> favoritesMix()
+    }
+
+    private suspend fun favoritesMix(): List<Song> {
         val favorites = runCatching { ListeningStats.summary(ReplayPeriod.ALL_TIME).songs.take(5).map { it.song } }
             .getOrDefault(emptyList())
         val seed = favorites.randomOrNull()
@@ -203,10 +271,23 @@ object DjSession {
         return YtMusicRepository.quickPicks().getOrNull().orEmpty().shuffled().take(30)
     }
 
-    private suspend fun moodSongs(mood: String): List<Song> {
+    /** Popular songs in the learning language, the same search Home's Practice tile uses. */
+    private suspend fun learnSongs(): List<Song> {
+        val learning = AppSettings.learningLanguage.value
+        if (learning.isBlank()) return emptyList()
+        val name = com.music.bitchord.data.lyrics.translationLanguageName(learning, Locale.ENGLISH)
+        return YtMusicRepository.search("popular $name songs", SearchFilter.SONGS)
+            .getOrNull().orEmpty()
+            .mapNotNull { (it as? SearchResult.Track)?.song ?: (it as? SearchResult.TopTrack)?.song }
+            .shuffled()
+            .take(30)
+    }
+
+    private suspend fun moodSongs(mood: DjVibe): List<Song> {
+        val key = mood.moodKey ?: return emptyList()
         val sections = YtMusicRepository.moodAndGenres().getOrNull().orEmpty()
         val match = sections.flatMap { it.items }
-            .firstOrNull { it.title.lowercase(Locale.ROOT).contains(mood) } ?: return emptyList()
+            .firstOrNull { it.title.lowercase(Locale.ROOT).contains(key) } ?: return emptyList()
         val shelves = YtMusicRepository.moodGenreShelves(match.browseId, match.params).getOrNull().orEmpty()
         val playlist = shelves.flatMap { it.items }.mapNotNull { it.browseId }.shuffled().firstOrNull()
             ?: return emptyList()
@@ -216,33 +297,7 @@ object DjSession {
             .take(MOOD_SONGS)
     }
 
-    /** The song that was just named starts from silence and rises softly under the voice. */
-    private fun fadeInUnderVoice() {
-        host?.setVolume(0f)
-        fadeTo(TALK_VOLUME, FADE_UNDER_MS, from = 0f)
-    }
-
-    private var volume = 1f
-
-    private fun fadeTo(target: Float, durationMs: Long, from: Float = volume) {
-        val host = host ?: return
-        fadeJob?.cancel()
-        fadeJob = scope.launch {
-            val steps = (durationMs / FADE_STEP_MS).coerceAtLeast(1)
-            for (step in 1..steps) {
-                val t = step.toFloat() / steps
-                // Eased, so the rise sounds like a fader rather than a ramp.
-                val eased = t * t * (3f - 2f * t)
-                volume = from + (target - from) * eased
-                host.setVolume(volume)
-                kotlinx.coroutines.delay(FADE_STEP_MS)
-            }
-            volume = target
-            host.setVolume(target)
-        }
-    }
-
-    private fun nextGap() = Random.nextInt(5, 11)
+    private fun nextGap() = kotlin.random.Random.nextInt(5, 11)
 
     /** The name the DJ greets the listener by. */
     fun displayName(nickname: String, accountName: String?): String =

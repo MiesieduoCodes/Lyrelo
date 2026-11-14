@@ -8,7 +8,16 @@ import kotlinx.coroutines.flow.asStateFlow
  * what the DJ is saying right now. Written by the app's DJ, read by the player.
  */
 object DjPresence {
-    data class State(val active: Boolean = false, val speaking: Boolean = false, val caption: String? = null)
+    /**
+     * @param notice the caption is a status ("Picking your mix…", "Can't reach
+     *   YouTube Music") to show even while the DJ is quiet.
+     */
+    data class State(
+        val active: Boolean = false,
+        val speaking: Boolean = false,
+        val caption: String? = null,
+        val notice: Boolean = false,
+    )
 
     private val _state = MutableStateFlow(State())
     val state = _state.asStateFlow()

@@ -585,6 +585,14 @@ object AppSettings {
     /** The spoken DJ between songs. Off until turned on in Settings → Learning. */
     val djEnabled = MutableStateFlow(false)
     val djSpeaksLearningLanguage = MutableStateFlow(true)
+    /** How often the DJ talks between songs. */
+    val djChattiness = MutableStateFlow(com.music.bitchord.playback.dj.DjChattiness.NORMAL)
+    /** The DJ's voice level, 0.5–1.5 of full media volume. */
+    val djVoiceVolume = MutableStateFlow(1f)
+    /** The natural English voice picked for the DJ (a NaturalVoice name). */
+    val djNaturalVoice = MutableStateFlow("AF_HEART")
+    /** "Not now" on the natural-voice offer. */
+    val djVoicePromptDismissed = MutableStateFlow(false)
     val lyricStyle = MutableStateFlow(LyricStyle.LINE)
     val lyricFontSize = MutableStateFlow(LyricFontSize.MEDIUM)
     val lyricFont = MutableStateFlow(LyricFont.DEFAULT)
@@ -1037,6 +1045,12 @@ object AppSettings {
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         legacyMeshGradient.value = prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)
         djEnabled.value = prefs.getBoolean(KEY_DJ_ENABLED, false)
+        djChattiness.value = runCatching {
+            com.music.bitchord.playback.dj.DjChattiness.valueOf(prefs.getString(KEY_DJ_CHATTINESS, null) ?: "NORMAL")
+        }.getOrDefault(com.music.bitchord.playback.dj.DjChattiness.NORMAL)
+        djVoiceVolume.value = prefs.getFloat(KEY_DJ_VOICE_VOLUME, 1f).coerceIn(0.5f, 1.5f)
+        djNaturalVoice.value = prefs.getString(KEY_DJ_NATURAL_VOICE, null) ?: "AF_HEART"
+        djVoicePromptDismissed.value = prefs.getBoolean(KEY_DJ_VOICE_PROMPT_DISMISSED, false)
         djSpeaksLearningLanguage.value = prefs.getBoolean(KEY_DJ_LEARNING_LANGUAGE, true)
         lyricStyle.value = enumPref(KEY_LYRIC_STYLE, LyricStyle.LINE)
         lyricFontSize.value = enumPref(KEY_LYRIC_FONT_SIZE, LyricFontSize.MEDIUM)
@@ -1665,6 +1679,27 @@ object AppSettings {
 
     private inline fun <reified T : Enum<T>> enumPref(key: String, default: T): T =
         runCatching { enumValueOf<T>(prefs.getString(key, null).orEmpty()) }.getOrDefault(default)
+
+    fun setDjChattiness(value: com.music.bitchord.playback.dj.DjChattiness) {
+        djChattiness.value = value
+        prefs.edit().putString(KEY_DJ_CHATTINESS, value.name).apply()
+    }
+
+    fun setDjVoicePromptDismissed(value: Boolean) {
+        djVoicePromptDismissed.value = value
+        prefs.edit().putBoolean(KEY_DJ_VOICE_PROMPT_DISMISSED, value).apply()
+    }
+
+    fun setDjNaturalVoice(value: String) {
+        djNaturalVoice.value = value
+        prefs.edit().putString(KEY_DJ_NATURAL_VOICE, value).apply()
+    }
+
+    fun setDjVoiceVolume(value: Float) {
+        val clamped = value.coerceIn(0.5f, 1.5f)
+        djVoiceVolume.value = clamped
+        prefs.edit().putFloat(KEY_DJ_VOICE_VOLUME, clamped).apply()
+    }
 
     fun setDjEnabled(value: Boolean) {
         djEnabled.value = value
@@ -2322,6 +2357,10 @@ object AppSettings {
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_LEARNING_LANGUAGE = "learning_language"
     private const val KEY_DJ_ENABLED = "dj_enabled"
+    private const val KEY_DJ_CHATTINESS = "dj_chattiness"
+    private const val KEY_DJ_VOICE_VOLUME = "dj_voice_volume"
+    private const val KEY_DJ_NATURAL_VOICE = "dj_natural_voice"
+    private const val KEY_DJ_VOICE_PROMPT_DISMISSED = "dj_voice_prompt_dismissed"
     private const val KEY_DJ_LEARNING_LANGUAGE = "dj_learning_language"
     private const val KEY_LYRIC_STYLE = "lyric_style"
     private const val KEY_LYRIC_FONT_SIZE = "lyric_font_size"

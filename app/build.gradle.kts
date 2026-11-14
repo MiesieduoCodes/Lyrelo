@@ -1,6 +1,7 @@
 import java.util.Properties
 import java.security.MessageDigest
 import java.io.FileInputStream
+import java.net.URI
 
 plugins {
     id("com.android.application")
@@ -194,6 +195,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     packaging {
+        jniLibs {
+            // sherpa-onnx links ONNX Runtime statically on every ABI but 32-bit x86, where it
+            // ships the same .so name as onnxruntime-android. x86 only reaches the universal
+            // APK, which no supported phone runs on that ABI; either copy will do.
+            pickFirsts += "lib/x86/libonnxruntime.so"
+        }
         resources {
             // SMBJ's BouncyCastle and jspecify both ship this descriptor.
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
@@ -242,6 +249,43 @@ val newPipeExtractorRaw: Configuration by configurations.creating {
     isTransitive = false
     isCanBeConsumed = false
 }
+/*
+ * sherpa-onnx (https://github.com/k2-fsa/sherpa-onnx, Apache 2.0), the offline
+ * text-to-speech the Lyrelo DJ's natural voice runs on. Pinned to 1.13.8: from
+ * 2.0 it no longer bundles espeak-ng, so Kokoro drops words missing from its
+ * lexicon (song titles, names) and Piper voices can't speak at all. It isn't published to
+ * Maven Central, so the official release AAR is fetched once into .gradle/
+ * (gitignored) and checked against a pinned SHA-256 before the build uses it:
+ * a changed or truncated download fails the build instead of shipping.
+ */
+val sherpaOnnxAar: File = run {
+    val version = "1.13.8"
+    val name = "sherpa-onnx-static-link-onnxruntime-$version.aar"
+    val sha256 = "b22c3fc1b6a45666d28892bb2f7694beeb77a8362d7ebd77c1a5431ec9435471"
+    val url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$version/$name"
+    val file = rootProject.file(".gradle/lyrelo-deps/$name")
+    fun digest(f: File): String = FileInputStream(f).use { input ->
+        val md = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(1 shl 16)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            md.update(buffer, 0, read)
+        }
+        md.digest().joinToString("") { "%02x".format(it) }
+    }
+    if (!file.isFile || digest(file) != sha256) {
+        file.parentFile.mkdirs()
+        logger.lifecycle("Downloading $name …")
+        val partial = File(file.parentFile, "$name.part")
+        URI(url).toURL().openStream().use { input -> partial.outputStream().use { input.copyTo(it) } }
+        val got = digest(partial)
+        check(got == sha256) { "$name: SHA-256 $got does not match the pinned $sha256" }
+        partial.renameTo(file) || error("couldn't move $partial into place")
+    }
+    file
+}
+
 dependencies {
     newPipeExtractorRaw("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
 }
@@ -401,6 +445,13 @@ dependencies {
     // files, which would put an offline conversion step between the model and
     // the app for a saving that does not matter in a self-distributed APK.
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
+
+    // ---- Lyrelo DJ: offline neural voice (sherpa-onnx, Apache 2.0) ----
+    // The static-link build carries its own ONNX Runtime inside its one .so,
+    // so it can't clash with onnxruntime-android above. See sherpaOnnxAar.
+    implementation(files(sherpaOnnxAar))
+    // Unpacks the voice models (.tar.bz2) the DJ downloads on first use.
+    implementation("org.apache.commons:commons-compress:1.27.1")
 
     // ---- Casting: Google Cast sender + the route discovery it sits on ----
     // The framework and the router only. media3-cast is left out on purpose:

@@ -114,15 +114,15 @@ it feel broken rather than charming:
       gain on the synthesized PCM, clamped to avoid clipping.
 
 **C. Natural voice**
-- [ ] sherpa-onnx (Apache 2.0) offline TTS via its Android AAR.
+- [ ] sherpa-onnx (Apache 2.0) offline TTS via its Android AAR, pinned to **1.13.8**: 2.x dropped espeak-ng, so Kokoro skips out-of-dictionary words (song titles) and Piper cannot speak.
 - [ ] Voices:
   - Kokoro multi-lang (Apache 2.0): `af_heart` (default), `af_bella`, `am_michael`,
     `am_fenrir`, for English.
-  - Piper `kk_KZ-issai-high` (dataset CC-BY-4.0) for Kazakh.
-  - Piper `ru_RU-dmitri-medium` (dataset CC0) for Russian.
+  - Piper `kk_KZ-issai-high` int8 (dataset CC-BY-4.0) for Kazakh.
+  - Piper `ru_RU-dmitri-medium` int8 (dataset CC0) for Russian.
   - **Not shipped:** `ru_RU-irina-medium` (dataset licence "Unknown") and
     `ru_RU-ruslan-medium` (CC BY-NC-SA, non-commercial). `ru_RU-denis` is non-commercial.
-- [ ] Models are not in the APK. On first DJ use: "Get the natural DJ voice (~140 MB)" with
+- [ ] Models are not in the APK. On first DJ use: "Get the natural DJ voice (~132 MB)" with
       progress, cancel, and Delete in Settings. Downloaded from sherpa-onnx's official GitHub
       releases and checked against a pinned size and SHA-256 before it is used.
 - [ ] Fallback when no model is downloaded: Android TTS with the highest-quality installed voice

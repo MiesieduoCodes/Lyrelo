@@ -102,7 +102,7 @@ internal fun DjBadge(state: DjPresence.State, modifier: Modifier = Modifier) {
             )
         }
         AnimatedVisibility(
-            visible = !state.caption.isNullOrBlank() && (state.speaking || state.caption.endsWith("…")),
+            visible = !state.caption.isNullOrBlank() && (state.speaking || state.notice),
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {

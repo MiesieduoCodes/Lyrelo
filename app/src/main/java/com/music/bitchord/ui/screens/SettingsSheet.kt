@@ -1678,6 +1678,10 @@ fun SettingsScreen(
                     onClick = { AppSettings.setDjEnabled(!djEnabled) },
                 )
             }
+            val djVoiceTitle = stringResource(R.string.dj_voice)
+            row(djVoiceTitle, "dj", "voice", "volume", "chatty", "quiet", "natural", "download") {
+                com.music.bitchord.ui.components.DjVoiceSettings()
+            }
             if (djEnabled) {
                 val djLanguageTitle = stringResource(R.string.dj_learning_language)
                 row(djLanguageTitle, "dj", "voice", "language") {

@@ -1114,52 +1114,25 @@ private fun BitChordApp(
     // control taken away — see [ListenTogether.State.controlsLocked].
     val hostOnlyMessage = stringResource(R.string.listen_together_host_only_notice)
     val showHostOnlyNotice: () -> Unit = { showQueueNotice(hostOnlyMessage) }
-    // Lyrelo DJ: a mix with a voice, started from Home or Library.
-    val djHost = remember {
-        object : com.music.bitchord.playback.DjSession.Host {
-            override suspend fun play(songs: List<Song>) {
-                controller?.playSongs(songs, 0)
-            }
-
-            override suspend fun queueNext(songs: List<Song>) {
-                val c = controller ?: return
-                c.addMediaItems(
-                    c.currentMediaItemIndex + 1,
-                    songs.map { it.asQueueEntry(QueueTier.USER_QUEUE).toMediaItem() },
+    // Lyrelo DJ: a mix with a voice, started from Home or Library. The vibe
+    // sheet starts it; the mix itself runs against the playback service (see
+    // DjSession / DjPlayerLink), so nothing here has to outlive this screen.
+    var showDjVibes by remember { mutableStateOf(false) }
+    val djContext = androidx.compose.ui.platform.LocalContext.current
+    val startDj: () -> Unit = { showDjVibes = true }
+    if (showDjVibes) {
+        com.music.bitchord.ui.components.DjVibeSheet(
+            onPick = { vibe ->
+                showDjVibes = false
+                com.music.bitchord.playback.DjSession.start(
+                    djContext,
+                    com.music.bitchord.playback.DjSession.displayName(ListenTogether.nickname(), account?.name),
+                    vibe,
                 )
-            }
-
-            override fun setVolume(volume: Float) {
-                controller?.volume = volume.coerceIn(0f, 1f)
-            }
-
-            override suspend fun playNow(songs: List<Song>) {
-                val c = controller ?: return
-                val at = c.currentMediaItemIndex + 1
-                c.addMediaItems(at, songs.map { it.asQueueEntry(QueueTier.USER_QUEUE).toMediaItem() })
-                // Straight to it by index, so shuffle can't pick a different song.
-                c.seekTo(at, 0L)
-            }
-        }
-    }
-    // The DJ hears about each new song from the player itself, the instant it
-    // starts, so it can fade the song in under its voice from the first note.
-    DisposableEffect(controller) {
-        val c = controller
-        val listener = object : androidx.media3.common.Player.Listener {
-            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-                mediaItem?.let { com.music.bitchord.playback.DjSession.onSongStarted(it.toSong()) }
-            }
-        }
-        c?.addListener(listener)
-        onDispose { c?.removeListener(listener) }
-    }
-    val startDj: () -> Unit = {
-        com.music.bitchord.playback.DjSession.start(
-            djHost,
-            com.music.bitchord.playback.DjSession.displayName(ListenTogether.nickname(), account?.name),
+                showNowPlaying = true
+            },
+            onDismiss = { showDjVibes = false },
         )
-        showNowPlaying = true
     }
 
     /**

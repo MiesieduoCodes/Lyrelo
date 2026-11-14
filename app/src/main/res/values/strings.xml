@@ -1384,4 +1384,117 @@
     <string name="pure_black_subtitle">True black in dark mode. Easier on OLED batteries.</string>
     <string name="settings_source_code">Source code</string>
     <string name="settings_based_on_bitchord">Based on BitChord by kushagrasinghx · GPLv3</string>
+    <!-- Lyrelo DJ: spoken lines. Short and casual, two sentences at most. Each array is one moment; the DJ picks a different variant each time. -->
+    <!-- %1$s = listener name, %2$s = song title, %3$s = artist -->
+    <string-array name="dj_line_intro">
+        <item>Hey %1$s, Lyrelo DJ here. Starting with %2$s by %3$s.</item>
+        <item>Hi %1$s! Let\'s ease in with %2$s by %3$s.</item>
+        <item>Welcome back, %1$s. First up, %2$s by %3$s.</item>
+        <item>%1$s, your mix is ready. Kicking off with %2$s by %3$s.</item>
+    </string-array>
+    <!-- %1$s = song title, %2$s = artist -->
+    <string-array name="dj_line_next_song">
+        <item>Up next, %1$s by %2$s.</item>
+        <item>Here\'s %1$s by %2$s.</item>
+        <item>This one\'s %1$s by %2$s.</item>
+        <item>Keep it going with %1$s by %2$s.</item>
+        <item>Now playing, %1$s by %2$s.</item>
+    </string-array>
+    <string-array name="dj_line_phrase_intro">
+        <item>Quick phrase from that song.</item>
+        <item>Here\'s a line worth keeping.</item>
+        <item>One phrase before we move on.</item>
+        <item>Let\'s grab a line from that track.</item>
+    </string-array>
+    <string-array name="dj_line_phrase_meaning">
+        <item>That means:</item>
+        <item>In other words:</item>
+        <item>It means:</item>
+    </string-array>
+    <!-- %1$d = days in the learning streak -->
+    <string-array name="dj_line_streak">
+        <item>You\'re on a %1$d-day streak. Nice.</item>
+        <item>%1$d days in a row. Keep it up.</item>
+        <item>Day %1$d of your streak. Let\'s go.</item>
+    </string-array>
+    <string-array name="dj_line_streak_done">
+        <item>That\'s today\'s learning done. %1$d days and counting.</item>
+        <item>Daily goal reached. Your streak is %1$d days.</item>
+    </string-array>
+    <!-- %1$s = the song that just ended, %2$s = the new mood, as an adjective ("chill", "romantic") -->
+    <string-array name="dj_line_vibe_change">
+        <item>That was %1$s. Let\'s go somewhere %2$s.</item>
+        <item>Nice. Time for something %2$s.</item>
+        <item>Switching it up. Something %2$s now.</item>
+    </string-array>
+    <!-- %1$s = the new mood, as an adjective -->
+    <string-array name="dj_line_change_up">
+        <item>Alright, changing the vibe. Something %1$s.</item>
+        <item>New vibe coming up. Something %1$s.</item>
+        <item>Let\'s switch gears. Here\'s something %1$s.</item>
+    </string-array>
+    <string-array name="dj_line_outro">
+        <item>That\'s the mix. Thanks for listening.</item>
+        <item>DJ signing off. Your queue is up next.</item>
+    </string-array>
+    <!-- Mood words the DJ says, in the order: chill, romance, feel good, energy, party, focus -->
+    <string-array name="dj_mood_words">
+        <item>chill</item>
+        <item>romantic</item>
+        <item>feel-good</item>
+        <item>high-energy</item>
+        <item>party-ready</item>
+        <item>focused</item>
+    </string-array>
+    <string name="dj_listener_fallback">there</string>
+
+    <!-- Lyrelo DJ: captions on the player -->
+    <string name="dj_caption_picking">Picking your mix…</string>
+    <string name="dj_caption_changing">Changing the vibe…</string>
+    <string name="dj_caption_offline">Can\'t reach YouTube Music. Check your connection and try again.</string>
+    <string name="dj_caption_handed_back">DJ mix ended. Your queue is up next.</string>
+    <string name="dj_caption_no_learning_language">Pick the language you\'re learning first.</string>
+
+    <!-- Lyrelo DJ: vibe sheet -->
+    <string name="dj_vibe_title">Pick a vibe</string>
+    <string name="dj_vibe_subtitle">The DJ plays it right away and talks between songs.</string>
+    <string name="dj_vibe_favorites">Your favorites</string>
+    <string name="dj_vibe_favorites_subtitle">What you play most</string>
+    <string name="dj_vibe_chill">Chill</string>
+    <string name="dj_vibe_romance">Romance</string>
+    <string name="dj_vibe_feel_good">Feel good</string>
+    <string name="dj_vibe_energy">Energy</string>
+    <string name="dj_vibe_party">Party</string>
+    <string name="dj_vibe_focus">Focus</string>
+    <string name="dj_vibe_learn">Learn</string>
+    <string name="dj_vibe_learn_subtitle">Songs in %1$s</string>
+    <string name="dj_change_vibe_action">Change vibe</string>
+    <string name="dj_end_action">End DJ mix</string>
+
+    <!-- Lyrelo DJ: settings -->
+    <string name="dj_chattiness">How often the DJ talks</string>
+    <string name="dj_chattiness_chatty">Chatty</string>
+    <string name="dj_chattiness_normal">Normal</string>
+    <string name="dj_chattiness_quiet">Quiet</string>
+    <string name="dj_voice_volume">DJ voice volume</string>
+    <string name="dj_voice_volume_value">%1$d%%</string>
+    <!-- Lyrelo DJ: natural voice -->
+    <string name="dj_voice_prompt_title">Get the natural DJ voice (~%1$d MB)</string>
+    <string name="dj_voice_prompt_body">A lifelike voice that runs on your phone. Downloads once, then works offline.</string>
+    <string name="dj_voice_get">Download</string>
+    <string name="dj_voice_not_now">Not now</string>
+    <string name="dj_voice_cancel">Cancel</string>
+    <string name="dj_voice_failed">Download failed. Check your connection and try again.</string>
+    <string name="dj_voice">DJ voice</string>
+    <string name="dj_voice_phone">Phone voice</string>
+    <string name="dj_voice_preview">Preview</string>
+    <string name="dj_voice_downloading">Downloading… %1$d%%</string>
+    <string name="dj_voice_installed">Natural voices on this phone</string>
+    <string name="dj_voice_delete">Delete</string>
+    <string name="dj_voice_af_heart">Heart</string>
+    <string name="dj_voice_af_bella">Bella</string>
+    <string name="dj_voice_am_michael">Michael</string>
+    <string name="dj_voice_am_fenrir">Fenrir</string>
+    <string name="dj_voice_ru_dmitri">Russian · Dmitri</string>
+    <string name="dj_voice_kk_issai">Kazakh · ISSAI</string>
 </resources>
